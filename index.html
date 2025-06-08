@@ -71,6 +71,76 @@
             padding: 30px;
         }
 
+        .github-config {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .github-config h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-group label {
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .config-group input {
+            padding: 8px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .config-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .config-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .config-btn {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .config-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+        }
+
         .controls {
             display: flex;
             justify-content: space-between;
@@ -323,7 +393,7 @@
                 align-items: stretch;
             }
 
-            .form-grid {
+            .form-grid, .config-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -363,14 +433,41 @@
     <div class="container">
         <div class="header">
             <h1>🏠 Rent Management System</h1>
-            <p>Track and manage your rental properties with ease</p>
+            <p>Track and manage your rental properties with GitHub storage</p>
         </div>
 
         <div class="main-content">
+            <div class="github-config">
+                <h3>⚙️ GitHub Configuration</h3>
+                <div class="config-grid">
+                    <div class="config-group">
+                        <label for="githubOwner">GitHub Username/Organization</label>
+                        <input type="text" id="githubOwner" placeholder="your-username" value="">
+                    </div>
+                    <div class="config-group">
+                        <label for="githubRepo">Repository Name</label>
+                        <input type="text" id="githubRepo" placeholder="rent-management-data" value="">
+                    </div>
+                    <div class="config-group">
+                        <label for="githubToken">Personal Access Token</label>
+                        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" value="">
+                    </div>
+                    <div class="config-group">
+                        <label for="githubBranch">Branch (optional)</label>
+                        <input type="text" id="githubBranch" placeholder="main" value="main">
+                    </div>
+                </div>
+                <div class="config-actions">
+                    <button class="config-btn" onclick="saveGitHubConfig()">💾 Save Config</button>
+                    <button class="config-btn" onclick="testGitHubConnection()">🔗 Test Connection</button>
+                    <button class="config-btn" onclick="loadGitHubConfig()">📁 Load Config</button>
+                </div>
+            </div>
+
             <div class="controls">
                 <div class="connection-status-container">
                     <div id="connectionStatus" class="connection-status offline">
-                        🔴 Checking connection...
+                        🔴 Configure GitHub settings first
                     </div>
                     <button class="retry-btn" onclick="retryConnection()">🔄 Retry Sync</button>
                 </div>
@@ -383,8 +480,8 @@
                         <option value="amountDue">Amount Due</option>
                     </select>
                 </div>
-                <button class="export-btn" onclick="exportToGoogleSheets()">
-                    📊 Export Data
+                <button class="export-btn" onclick="exportToCSV()">
+                    📊 Export CSV
                 </button>
             </div>
 
@@ -463,118 +560,219 @@
     <script>
         // Data storage
         let rentData = [];
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyD4oF9GxyVzyWHleD5PbtCSKF24tVtx5aHoUtZJCC2uqvDfBMLINsKWEMDpjULQ9lJRg/exec';
+        let githubConfig = {
+            owner: '',
+            repo: '',
+            token: '',
+            branch: 'main'
+        };
         let isOnlineMode = false;
+        const DATA_FILE_PATH = 'rent-data.json';
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
+            loadGitHubConfig();
             loadData();
             setCurrentMonth();
             setupEventListeners();
             renderTable();
         });
 
-        async function loadData() {
-            // First try to load from localStorage
-            const localData = localStorage.getItem('rentManagementData');
-            if (localData) {
-                rentData = JSON.parse(localData);
-                showNotification('Loaded data from local storage');
+        function saveGitHubConfig() {
+            githubConfig = {
+                owner: document.getElementById('githubOwner').value.trim(),
+                repo: document.getElementById('githubRepo').value.trim(),
+                token: document.getElementById('githubToken').value.trim(),
+                branch: document.getElementById('githubBranch').value.trim() || 'main'
+            };
+
+            if (!githubConfig.owner || !githubConfig.repo || !githubConfig.token) {
+                showNotification('Please fill in all required GitHub configuration fields', 'error');
+                return;
             }
 
-            // Then try to sync with Google Sheets
+            // Save to memory only (not using localStorage due to restrictions)
+            showNotification('GitHub configuration saved for this session');
+            updateConnectionStatus(false, 'Configuration saved - ready to test connection');
+        }
+
+        function loadGitHubConfig() {
+            // Configuration is stored in memory during session
+            // You would need to re-enter config each time the page loads
+            updateConnectionStatus(false, 'Configure GitHub settings to get started');
+        }
+
+        async function testGitHubConnection() {
+            if (!githubConfig.owner || !githubConfig.repo || !githubConfig.token) {
+                showNotification('Please save GitHub configuration first', 'error');
+                return;
+            }
+
             try {
-                showNotification('Syncing with Google Sheets...', 'info');
+                showNotification('Testing GitHub connection...', 'info');
                 
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=getData`, {
-                    method: 'GET',
-                    mode: 'cors',
+                const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}`, {
                     headers: {
-                        'Accept': 'application/json',
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
                     }
                 });
-                
+
                 if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.data && Array.isArray(data.data)) {
-                        rentData = data.data;
-                        localStorage.setItem('rentManagementData', JSON.stringify(rentData));
-                        isOnlineMode = true;
-                        showNotification('✅ Synced with Google Sheets successfully!');
-                    } else {
-                        throw new Error('Invalid data format from server');
-                    }
+                    isOnlineMode = true;
+                    showNotification('✅ GitHub connection successful!');
+                    updateConnectionStatus(true);
+                    // Try to load existing data
+                    await loadDataFromGitHub();
+                } else if (response.status === 404) {
+                    showNotification('Repository not found. Creating new data file...', 'info');
+                    isOnlineMode = true;
+                    updateConnectionStatus(true);
                 } else {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
             } catch (error) {
-                console.error('Google Sheets sync failed:', error);
+                console.error('GitHub connection failed:', error);
                 isOnlineMode = false;
-                showNotification('⚠️ Working offline - Google Sheets not accessible', 'error');
-                
-                // Show connection status
-                updateConnectionStatus(false);
+                updateConnectionStatus(false, 'Connection failed');
+                showNotification('❌ GitHub connection failed: ' + error.message, 'error');
+            }
+        }
+
+        async function loadData() {
+            // Load from memory first (since we can't use localStorage)
+            if (rentData.length === 0) {
+                showNotification('No local data found');
+            }
+
+            // Try to load from GitHub if configured
+            if (githubConfig.owner && githubConfig.repo && githubConfig.token) {
+                await loadDataFromGitHub();
             }
             
             renderTable();
         }
 
-        function updateConnectionStatus(online) {
+        async function loadDataFromGitHub() {
+            try {
+                showNotification('Loading data from GitHub...', 'info');
+                
+                const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${DATA_FILE_PATH}?ref=${githubConfig.branch}`, {
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (response.ok) {
+                    const fileData = await response.json();
+                    const content = atob(fileData.content);
+                    const data = JSON.parse(content);
+                    
+                    if (Array.isArray(data)) {
+                        rentData = data;
+                        isOnlineMode = true;
+                        showNotification('✅ Data loaded from GitHub successfully!');
+                        updateConnectionStatus(true);
+                    } else {
+                        throw new Error('Invalid data format in GitHub file');
+                    }
+                } else if (response.status === 404) {
+                    // File doesn't exist yet - that's okay
+                    isOnlineMode = true;
+                    updateConnectionStatus(true);
+                    showNotification('No existing data file found. Ready to create new data.', 'info');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('GitHub data loading failed:', error);
+                isOnlineMode = false;
+                updateConnectionStatus(false);
+                showNotification('⚠️ Failed to load data from GitHub: ' + error.message, 'error');
+            }
+        }
+
+        function updateConnectionStatus(online, customMessage = null) {
             const statusEl = document.getElementById('connectionStatus');
             if (online) {
-                statusEl.innerHTML = '🟢 Online - Synced with Google Sheets';
+                statusEl.innerHTML = customMessage || '🟢 Online - Connected to GitHub';
                 statusEl.className = 'connection-status online';
             } else {
-                statusEl.innerHTML = '🔴 Offline - Data saved locally only';
+                statusEl.innerHTML = customMessage || '🔴 Offline - Configure GitHub first';
                 statusEl.className = 'connection-status offline';
             }
         }
 
-        async function saveData() {
-            // Always save locally first
-            localStorage.setItem('rentManagementData', JSON.stringify(rentData));
-            
-            // Try to sync with Google Sheets if online
-            if (isOnlineMode) {
-                try {
-                    showNotification('Syncing with Google Sheets...', 'info');
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'cors',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: new URLSearchParams({
-                            action: 'saveData',
-                            data: JSON.stringify(rentData)
-                        })
-                    });
+        async function saveDataToGitHub() {
+            if (!isOnlineMode || !githubConfig.token) {
+                showNotification('💾 Data saved locally (GitHub not configured)', 'info');
+                return;
+            }
 
-                    if (response.ok) {
-                        const result = await response.json();
-                        if (result.success) {
-                            showNotification('✅ Synced with Google Sheets!');
-                            updateConnectionStatus(true);
-                        } else {
-                            throw new Error(result.error || 'Sync failed');
+            try {
+                showNotification('Saving to GitHub...', 'info');
+                
+                // First, try to get the current file to get its SHA (required for updates)
+                let sha = null;
+                try {
+                    const currentFileResponse = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${DATA_FILE_PATH}?ref=${githubConfig.branch}`, {
+                        headers: {
+                            'Authorization': `token ${githubConfig.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
                         }
-                    } else {
-                        throw new Error(`HTTP ${response.status}`);
+                    });
+                    
+                    if (currentFileResponse.ok) {
+                        const currentFile = await currentFileResponse.json();
+                        sha = currentFile.sha;
                     }
-                } catch (error) {
-                    console.error('Google Sheets sync failed:', error);
-                    isOnlineMode = false;
-                    updateConnectionStatus(false);
-                    showNotification('⚠️ Saved locally - Google Sheets sync failed', 'error');
+                } catch (e) {
+                    // File might not exist yet
                 }
-            } else {
-                showNotification('💾 Saved locally (offline mode)');
+
+                // Prepare the data
+                const content = btoa(JSON.stringify(rentData, null, 2));
+                const commitMessage = `Update rent data - ${new Date().toISOString()}`;
+
+                const requestBody = {
+                    message: commitMessage,
+                    content: content,
+                    branch: githubConfig.branch
+                };
+
+                if (sha) {
+                    requestBody.sha = sha;
+                }
+
+                const response = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${DATA_FILE_PATH}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubConfig.token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (response.ok) {
+                    showNotification('✅ Data saved to GitHub successfully!');
+                    updateConnectionStatus(true);
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.error('GitHub save failed:', error);
+                isOnlineMode = false;
+                updateConnectionStatus(false);
+                showNotification('❌ Failed to save to GitHub: ' + error.message, 'error');
             }
         }
 
         async function retryConnection() {
             showNotification('Retrying connection...', 'info');
-            await loadData();
+            await testGitHubConnection();
         }
 
         function setCurrentMonth() {
@@ -588,7 +786,7 @@
             document.getElementById('sortBy').addEventListener('change', renderTable);
         }
 
-        function handleFormSubmit(e) {
+        async function handleFormSubmit(e) {
             e.preventDefault();
             
             const formData = {
@@ -630,8 +828,8 @@
                 });
             }
 
-            // Save to Google Sheets
-            saveData();
+            // Save to GitHub
+            await saveDataToGitHub();
             renderTable();
             document.getElementById('rentForm').reset();
             setCurrentMonth();
@@ -670,139 +868,3 @@
                     case 'room':
                         return a.roomNumber.localeCompare(b.roomNumber);
                     case 'startDate':
-                        return new Date(a.startDate) - new Date(b.startDate);
-                    case 'amountDue':
-                        return calculateAmountDue(b) - calculateAmountDue(a);
-                    default:
-                        return 0;
-                }
-            });
-
-            tbody.innerHTML = sortedData.map(record => {
-                const amountDue = calculateAmountDue(record);
-                const amountDueClass = amountDue === 0 ? 'zero' : 'positive';
-                
-                return `
-                    <tr>
-                        <td><strong>${record.plotNumber}</strong></td>
-                        <td><strong>${record.roomNumber}</strong></td>
-                        <td>${new Date(record.startDate).toLocaleDateString('en-IN')}</td>
-                        <td>₹${record.advancePaid.toLocaleString('en-IN')}</td>
-                        <td>
-                            <span class="amount-due ${amountDueClass}">
-                                ₹${amountDue.toLocaleString('en-IN')}
-                            </span>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        async function exportToGoogleSheets() {
-            if (rentData.length === 0) {
-                showNotification('No data to export!', 'error');
-                return;
-            }
-
-            try {
-                showNotification('Exporting data to Google Sheets...', 'info');
-                
-                // Prepare data for export with calculated values
-                const exportData = rentData.map(record => ({
-                    plotNumber: record.plotNumber,
-                    roomNumber: record.roomNumber,
-                    startDate: record.startDate,
-                    advancePaid: record.advancePaid,
-                    monthlyRent: record.rentAmount,
-                    totalRentPaid: record.totalRentPaid || record.rentAmount,
-                    totalBillPaid: record.totalBillPaid || record.billAmount,
-                    lastPaymentMonth: record.lastPaymentMonth || record.month,
-                    amountDue: calculateAmountDue(record),
-                    electricityUnit: record.electricityUnit,
-                    billAmount: record.billAmount,
-                    dateAdded: record.dateAdded
-                }));
-
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        action: 'exportData',
-                        data: JSON.stringify(exportData)
-                    })
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    if (result.success) {
-                        showNotification('Data exported to Google Sheets successfully!');
-                        if (result.url) {
-                            showNotification(`Export complete! Sheet URL: ${result.url}`);
-                        }
-                    } else {
-                        throw new Error(result.error || 'Export failed');
-                    }
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error('Error exporting data:', error);
-                // Fallback to CSV download
-                downloadCSV();
-                showNotification('Google Sheets export failed. Downloaded CSV instead.', 'error');
-            }
-        }
-
-        function downloadCSV() {
-            const headers = [
-                'Plot Number', 'Room Number', 'Start Date', 'Advance Paid', 
-                'Monthly Rent', 'Total Rent Paid', 'Total Bill Paid', 
-                'Last Payment Month', 'Amount Due', 'Electricity Units', 'Bill Amount', 'Date Added'
-            ];
-
-            const csvContent = [
-                headers.join(','),
-                ...rentData.map(record => {
-                    const amountDue = calculateAmountDue(record);
-                    return [
-                        `"${record.plotNumber}"`,
-                        `"${record.roomNumber}"`,
-                        `"${record.startDate}"`,
-                        record.advancePaid,
-                        record.rentAmount,
-                        record.totalRentPaid || record.rentAmount,
-                        record.totalBillPaid || record.billAmount,
-                        `"${record.lastPaymentMonth || record.month}"`,
-                        amountDue,
-                        record.electricityUnit,
-                        record.billAmount,
-                        `"${new Date(record.dateAdded).toLocaleDateString('en-IN')}"`
-                    ].join(',');
-                })
-            ].join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `rent_management_${new Date().toISOString().slice(0, 10)}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification show ${type}`;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-    </script>
-</body>
-</html>
