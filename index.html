@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rent Management System</title>
-    
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
@@ -72,6 +72,7 @@
                                 <th>Start Date</th>
                                 <th>Advance Paid</th>
                                 <th>Amount Due</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="rentTableBody">
@@ -155,6 +156,7 @@
             renderTable();
         });
 
+        // GitHub Configuration Functions
         function saveGitHubConfig() {
             githubConfig = {
                 owner: document.getElementById('githubOwner').value.trim(),
@@ -168,15 +170,12 @@
                 return;
             }
 
-            // Save to memory only (not using localStorage due to restrictions)
-            showNotification('GitHub configuration saved for this session');
-            updateConnectionStatus(false, 'Configuration saved - ready to test connection');
+            showNotification('GitHub configuration saved for this session', 'success');
+            updateConnectionStatus(false, '🟡 Configuration saved - ready to test connection');
         }
 
         function loadGitHubConfig() {
-            // Configuration is stored in memory during session
-            // You would need to re-enter config each time the page loads
-            updateConnectionStatus(false, 'Configure GitHub settings to get started');
+            updateConnectionStatus(false, '🔴 Configure GitHub settings to get started');
         }
 
         async function testGitHubConnection() {
@@ -197,9 +196,8 @@
 
                 if (response.ok) {
                     isOnlineMode = true;
-                    showNotification('✅ GitHub connection successful!');
+                    showNotification('✅ GitHub connection successful!', 'success');
                     updateConnectionStatus(true);
-                    // Try to load existing data
                     await loadDataFromGitHub();
                 } else if (response.status === 404) {
                     showNotification('Repository not found. Creating new data file...', 'info');
@@ -211,18 +209,17 @@
             } catch (error) {
                 console.error('GitHub connection failed:', error);
                 isOnlineMode = false;
-                updateConnectionStatus(false, 'Connection failed');
+                updateConnectionStatus(false, '🔴 Connection failed');
                 showNotification('❌ GitHub connection failed: ' + error.message, 'error');
             }
         }
 
+        // Data Loading Functions
         async function loadData() {
-            // Load from memory first (since we can't use localStorage)
             if (rentData.length === 0) {
-                showNotification('No local data found');
+                showNotification('No local data found', 'info');
             }
 
-            // Try to load from GitHub if configured
             if (githubConfig.owner && githubConfig.repo && githubConfig.token) {
                 await loadDataFromGitHub();
             }
@@ -249,13 +246,13 @@
                     if (Array.isArray(data)) {
                         rentData = data;
                         isOnlineMode = true;
-                        showNotification('✅ Data loaded from GitHub successfully!');
+                        showNotification('✅ Data loaded from GitHub successfully!', 'success');
                         updateConnectionStatus(true);
+                        renderTable();
                     } else {
                         throw new Error('Invalid data format in GitHub file');
                     }
                 } else if (response.status === 404) {
-                    // File doesn't exist yet - that's okay
                     isOnlineMode = true;
                     updateConnectionStatus(true);
                     showNotification('No existing data file found. Ready to create new data.', 'info');
@@ -270,6 +267,7 @@
             }
         }
 
+        // Status and UI Functions
         function updateConnectionStatus(online, customMessage = null) {
             const statusEl = document.getElementById('connectionStatus');
             if (online) {
@@ -290,7 +288,6 @@
             try {
                 showNotification('Saving to GitHub...', 'info');
                 
-                // First, try to get the current file to get its SHA (required for updates)
                 let sha = null;
                 try {
                     const currentFileResponse = await fetch(`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${DATA_FILE_PATH}?ref=${githubConfig.branch}`, {
@@ -308,7 +305,6 @@
                     // File might not exist yet
                 }
 
-                // Prepare the data
                 const content = btoa(JSON.stringify(rentData, null, 2));
                 const commitMessage = `Update rent data - ${new Date().toISOString()}`;
 
@@ -333,7 +329,7 @@
                 });
 
                 if (response.ok) {
-                    showNotification('✅ Data saved to GitHub successfully!');
+                    showNotification('✅ Data saved to GitHub successfully!', 'success');
                     updateConnectionStatus(true);
                 } else {
                     const errorData = await response.json();
@@ -352,6 +348,7 @@
             await testGitHubConnection();
         }
 
+        // Form and Data Management Functions
         function setCurrentMonth() {
             const now = new Date();
             const currentMonth = now.toISOString().slice(0, 7);
@@ -379,14 +376,12 @@
                 dateAdded: new Date().toISOString()
             };
 
-            // Check if record already exists for this plot/room combination
             const existingIndex = rentData.findIndex(item => 
                 item.plotNumber === formData.plotNumber && 
                 item.roomNumber === formData.roomNumber
             );
 
             if (existingIndex !== -1) {
-                // Update existing record
                 const existing = rentData[existingIndex];
                 rentData[existingIndex] = {
                     ...existing,
@@ -395,17 +390,17 @@
                     totalBillPaid: (existing.totalBillPaid || 0) + formData.billAmount,
                     lastPaymentMonth: formData.month
                 };
+                showNotification('Rent record updated successfully!', 'success');
             } else {
-                // Add new record
                 rentData.push({
                     ...formData,
                     totalRentPaid: formData.rentAmount,
                     totalBillPaid: formData.billAmount,
                     lastPaymentMonth: formData.month
                 });
+                showNotification('New rent record added successfully!', 'success');
             }
 
-            // Save to GitHub
             await saveDataToGitHub();
             renderTable();
             document.getElementById('rentForm').reset();
@@ -419,9 +414,11 @@
                              (currentDate.getMonth() - startDate.getMonth()) + 1;
             
             const totalRentDue = monthsDiff * record.rentAmount;
-            const totalPaid = record.totalRentPaid + record.totalBillPaid + record.advancePaid;
+            const totalBillDue = monthsDiff * record.billAmount;
+            const totalDue = totalRentDue + totalBillDue;
+            const totalPaid = (record.totalRentPaid || 0) + (record.totalBillPaid || 0) + record.advancePaid;
             
-            return Math.max(0, totalRentDue - totalPaid);
+            return Math.max(0, totalDue - totalPaid);
         }
 
         function renderTable() {
@@ -445,3 +442,110 @@
                     case 'room':
                         return a.roomNumber.localeCompare(b.roomNumber);
                     case 'startDate':
+                        return new Date(a.startDate) - new Date(b.startDate);
+                    case 'amountDue':
+                        return calculateAmountDue(b) - calculateAmountDue(a);
+                    default:
+                        return 0;
+                }
+            });
+
+            tbody.innerHTML = sortedData.map(record => {
+                const amountDue = calculateAmountDue(record);
+                return `
+                    <tr>
+                        <td>${record.plotNumber}</td>
+                        <td>${record.roomNumber}</td>
+                        <td>${new Date(record.startDate).toLocaleDateString()}</td>
+                        <td>₹${record.advancePaid.toLocaleString()}</td>
+                        <td class="${amountDue > 0 ? 'amount-due' : 'amount-paid'}">
+                            ₹${amountDue.toLocaleString()}
+                        </td>
+                        <td>
+                            <button class="action-btn edit-btn" onclick="editRecord(${record.id})">Edit</button>
+                            <button class="action-btn delete-btn" onclick="deleteRecord(${record.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Record Management Functions
+        function editRecord(id) {
+            const record = rentData.find(item => item.id === id);
+            if (!record) return;
+
+            document.getElementById('plotNumber').value = record.plotNumber;
+            document.getElementById('roomNumber').value = record.roomNumber;
+            document.getElementById('startDate').value = record.startDate;
+            document.getElementById('advancePaid').value = record.advancePaid;
+            document.getElementById('month').value = record.month;
+            document.getElementById('rentAmount').value = record.rentAmount;
+            document.getElementById('electricityUnit').value = record.electricityUnit;
+            document.getElementById('billAmount').value = record.billAmount;
+
+            document.querySelector('.form-section h2').textContent = 'Edit Rent Record';
+            document.querySelector('.submit-btn').textContent = 'Update Record';
+
+            // Scroll to form
+            document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm('Are you sure you want to delete this record?')) return;
+
+            rentData = rentData.filter(item => item.id !== id);
+            await saveDataToGitHub();
+            renderTable();
+            showNotification('Record deleted successfully!', 'success');
+        }
+
+        // Export Function
+        function exportToCSV() {
+            if (rentData.length === 0) {
+                showNotification('No data to export', 'error');
+                return;
+            }
+
+            const headers = ['Plot Number', 'Room Number', 'Start Date', 'Advance Paid', 'Rent Amount', 'Electricity Units', 'Bill Amount', 'Amount Due', 'Last Payment Month'];
+            const csvContent = [
+                headers.join(','),
+                ...rentData.map(record => [
+                    record.plotNumber,
+                    record.roomNumber,
+                    record.startDate,
+                    record.advancePaid,
+                    record.rentAmount,
+                    record.electricityUnit,
+                    record.billAmount,
+                    calculateAmountDue(record),
+                    record.lastPaymentMonth || 'N/A'
+                ].join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rent-data-${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            showNotification('Data exported successfully!', 'success');
+        }
+
+        // Notification System
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
