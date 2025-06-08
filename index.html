@@ -14,32 +14,6 @@
         </div>
 
         <div class="main-content">
-            <div class="github-config">
-                <h3>⚙️ GitHub Configuration</h3>
-                <div class="config-grid">
-                    <div class="config-group">
-                        <label for="githubOwner">GitHub Username/Organization</label>
-                        <input type="text" id="githubOwner" placeholder="your-username" value="">
-                    </div>
-                    <div class="config-group">
-                        <label for="githubRepo">Repository Name</label>
-                        <input type="text" id="githubRepo" placeholder="rent-management-data" value="">
-                    </div>
-                    <div class="config-group">
-                        <label for="githubToken">Personal Access Token</label>
-                        <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx" value="">
-                    </div>
-                    <div class="config-group">
-                        <label for="githubBranch">Branch (optional)</label>
-                        <input type="text" id="githubBranch" placeholder="main" value="main">
-                    </div>
-                </div>
-                <div class="config-actions">
-                    <button class="config-btn" onclick="saveGitHubConfig()">💾 Save Config</button>
-                    <button class="config-btn" onclick="testGitHubConnection()">🔗 Test Connection</button>
-                    <button class="config-btn" onclick="loadGitHubConfig()">📁 Load Config</button>
-                </div>
-            </div>
 
             <div class="controls">
                 <div class="connection-status-container">
@@ -139,21 +113,22 @@
         // Data storage
         let rentData = [];
         let githubConfig = {
-            owner: '',
-            repo: '',
-            token: '',
-            branch: 'main'
+            owner: 'gauravyadav26', // Replace with your GitHub username or organization
+            repo: 'rent',         // Replace with your repository name (e.g., 'rent-management-data')
+            token: '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', // Replace with your GitHub Personal Access Token
+            branch: 'main'                        // Or your desired branch, e.g., 'main'
         };
         let isOnlineMode = false;
         const DATA_FILE_PATH = 'rent-data.json';
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            loadGitHubConfig();
-            loadData();
+            loadData(); // This will internally call loadDataFromGitHub if config is set
             setCurrentMonth();
             setupEventListeners();
             renderTable();
+            // Directly test connection on load
+            testGitHubConnection();
         });
 
         // GitHub Configuration Functions
