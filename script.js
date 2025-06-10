@@ -325,14 +325,14 @@ function createTenantCard(tenant) {
                     <p><strong>Start Date:</strong> ${formatDate(tenant.startDate)}</p>
                     ${tenant.endDate ? `<p><strong>End Date:</strong> ${formatDate(tenant.endDate)}</p>` : ''}
                     <p><strong>Months Since Start:</strong> ${monthsSinceStart}</p>
-                    <p><strong>Monthly Rent:</strong> ₹${tenant.monthlyRent}</p>
+                    <p><strong>Monthly Rent:</strong> ₹${formatIndianNumber(tenant.monthlyRent)}</p>
                     <p><strong>Advance Paid:</strong> ₹${tenant.advancePaid}</p>
                 </div>
                 
                 <div class="info-section">
                     <h4><i class="fas fa-money-bill-wave"></i> Payment Information</h4>
-                    <p><strong>Current Month:</strong> ₹${Math.round(currentMonthDue)}</p>
-                    <p><strong>Total Due:</strong> <span class="total-due-amount">₹${Math.round(previousDue || 0)}</span></p>
+                    <p><strong>Current Month:</strong> ₹${formatIndianNumber(Math.round(currentMonthDue))}</p>
+                    <p><strong>Total Due:</strong> <span class="total-due-amount">₹${formatIndianNumber(Math.round(previousDue || 0))}</span></p>
                     <p><strong>Last Payment:</strong> ₹${Math.round(lastPayment.amount)} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
                 </div>
                 
@@ -341,8 +341,8 @@ function createTenantCard(tenant) {
                     <p><strong>Start Reading:</strong> ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})</p>
                     <p><strong>Previous Reading:</strong> ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})</p>
                     <p><strong>Latest Reading:</strong> ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})</p>
-                    <p><strong>Current Month Bill:</strong> ₹${Math.round(currentMonthBill)}</p>
-                    <p><strong>Total Electricity Bill:</strong> ₹${Math.round(totalElectricityBill)}</p>
+                    <p><strong>Current Month Bill:</strong> ₹${formatIndianNumber(Math.round(currentMonthBill))}</p>
+                    <p><strong>Total Electricity Bill:</strong> ₹${formatIndianNumber(Math.round(totalElectricityBill))}</p>
                 </div>
             </div>
             <div class="tenant-actions">
@@ -372,14 +372,17 @@ function updateDashboardStats() {
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
     // Calculate total tenants
-    document.getElementById('total-tenants').textContent = tenants.length;
+    document.getElementById('total-tenants').textContent = formatIndianNumber(tenants.length);
     
     // Calculate total due by summing up each tenant's total due
     const totalDue = tenants.reduce((sum, tenant) => {
         return sum + calculatePreviousDue(tenant);
     }, 0);
     
-    document.getElementById('total-rent').textContent = `₹${Math.round(totalDue)}`;
+    document.getElementById('total-rent').textContent = `₹${formatIndianNumber(Math.round(totalDue))}`;
+
+    // Add current month payments calculation
+    calculateCurrentMonthPayments();
 }
 
 // Format date to dd/mm/yy
@@ -620,11 +623,17 @@ function loadPaymentHistory() {
     paymentHistoryList.innerHTML = '';
 
     let allPayments = [];
+    let totalAmount = 0;
+    let monthlyAmount = 0;
+
     tenants.forEach(tenant => {
         if (!selectedTenant || tenant.id === parseInt(selectedTenant)) {
             if (tenant.paymentHistory) {
                 tenant.paymentHistory.forEach((payment, index) => {
-                    if (!selectedMonth || payment.date.startsWith(selectedMonth)) {
+                    const paymentDate = new Date(payment.date);
+                    const isSelectedMonth = !selectedMonth || payment.date.startsWith(selectedMonth);
+                    
+                    if (isSelectedMonth) {
                         allPayments.push({
                             ...payment,
                             tenantName: tenant.tenantName,
@@ -632,11 +641,24 @@ function loadPaymentHistory() {
                             tenantId: tenant.id,
                             paymentIndex: index
                         });
+                        monthlyAmount += parseFloat(payment.amount) || 0;
                     }
+                    totalAmount += parseFloat(payment.amount) || 0;
                 });
             }
         }
     });
+
+    // Update payment summaries
+    document.getElementById('total-payments').textContent = `₹${formatIndianNumber(Math.round(totalAmount))}`;
+    
+    const monthlySummary = document.getElementById('monthly-summary');
+    if (selectedMonth) {
+        monthlySummary.style.display = 'block';
+        document.getElementById('monthly-payments').textContent = `₹${formatIndianNumber(Math.round(monthlyAmount))}`;
+    } else {
+        monthlySummary.style.display = 'none';
+    }
 
     if (allPayments.length === 0) {
         paymentHistoryList.innerHTML = '<p class="no-tenants">No payment history found.</p>';
@@ -665,7 +687,7 @@ function loadPaymentHistory() {
                     <td>${new Date(payment.date).toLocaleDateString()}</td>
                     <td>${payment.tenantName}</td>
                     <td>${payment.roomNumber}</td>
-                    <td>₹${payment.amount}</td>
+                    <td>₹${formatIndianNumber(Math.round(payment.amount))}</td>
                     <td>
                         <button onclick="editPayment(${payment.tenantId}, ${payment.paymentIndex})" class="edit-btn">
                             <i class="fas fa-edit"></i>
@@ -1253,3 +1275,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Function to format number with commas
+function formatNumberWithCommas(number) {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// Function to format number in Indian system (lakhs and crores)
+function formatIndianNumber(number) {
+    const numStr = number.toString();
+    const lastThree = numStr.substring(numStr.length - 3);
+    const otherNumbers = numStr.substring(0, numStr.length - 3);
+    const formatted = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + (otherNumbers ? "," : "") + lastThree;
+    return formatted;
+}
+
+// Function to calculate current month's total payments
+function calculateCurrentMonthPayments() {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    let totalPayments = 0;
+    
+    // Get current plot's tenants
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    
+    // Calculate total payments from all tenants' payment histories
+    tenants.forEach(tenant => {
+        if (tenant.paymentHistory) {
+            tenant.paymentHistory.forEach(payment => {
+                const paymentDate = new Date(payment.date);
+                if (paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
+                    totalPayments += parseFloat(payment.amount) || 0;
+                }
+            });
+        }
+    });
+    
+    // Update the display with rounded number in Indian format
+    document.getElementById('current-month-payments').textContent = `₹${formatIndianNumber(Math.round(totalPayments))}`;
+}

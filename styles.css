@@ -63,20 +63,17 @@ body::before {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 1.5rem;
+    padding: 1rem;
     animation: fadeIn 0.5s ease-out;
     position: relative;
     z-index: 1;
 }
 
 header {
-    background-color: var(--card-background);
-    padding: 1.25rem;
-    border-radius: 0.75rem;
-    box-shadow: var(--shadow-md);
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--border-color);
-    animation: slideIn 0.5s ease-out;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
 header h1 {
@@ -1807,4 +1804,95 @@ input:focus, select:focus, textarea:focus {
 .success-message {
     animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     transform-origin: top;
+}
+
+/* Add Summary section styles */
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.summary-stats .stat-card {
+    background: var(--card-background);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.summary-stats .stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.summary-stats .stat-card i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.summary-stats .stat-card span {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.summary-stats .stat-card label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .summary-stats .stat-card {
+    background: var(--card-background);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.payment-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.payment-summary .summary-card {
+    background: var(--card-background);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s ease;
+}
+
+.payment-summary .summary-card:hover {
+    transform: translateY(-2px);
+}
+
+.payment-summary .summary-card i {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.payment-summary .summary-card span {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.payment-summary .summary-card label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+[data-theme="dark"] .payment-summary .summary-card {
+    background: var(--card-background-dark);
+    box-shadow: var(--shadow-md);
 } 
