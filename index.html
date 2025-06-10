@@ -16,6 +16,11 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="A web application for managing rental properties and tenants">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" href="icons/icon-192x192.png">
     <title>Rental Management System</title>
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 4L4 14V28H28V14L16 4Z' fill='%234A90E2'/><rect x='12' y='18' width='8' height='10' fill='%232C3E50'/><rect x='20' y='12' width='4' height='4' fill='%232C3E50'/><rect x='8' y='12' width='4' height='4' fill='%232C3E50'/><path d='M4 14L16 4L28 14' stroke='%232C3E50' stroke-width='2'/></svg>">
@@ -188,5 +193,32 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('./sw.js', {
+                        scope: './'
+                    });
+                    console.log('ServiceWorker registration successful with scope:', registration.scope);
+                    
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        console.log('Service Worker update found!');
+                        
+                        newWorker.addEventListener('statechange', () => {
+                            console.log('Service Worker state:', newWorker.state);
+                        });
+                    });
+                } catch (error) {
+                    console.error('ServiceWorker registration failed:', error);
+                }
+            });
+        } else {
+            console.log('Service Workers not supported');
+        }
+    </script>
 </body>
 </html> 
