@@ -82,6 +82,7 @@ header {
 header h1 {
     color: var(--primary-color);
     font-size: 1.5rem;
+    margin-top: 0;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
@@ -101,7 +102,6 @@ header h1 {
     padding: 1.25rem;
     border-radius: 0.75rem;
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 0.5rem;
     transition: all 0.3s ease;
@@ -120,7 +120,7 @@ header h1 {
 }
 
 .stat-card i {
-    font-size: 1.5rem;
+    font-size: clamp(1rem, 0.5rem + 2vw, 2rem);
     color: var(--primary-color);
     background: rgba(59, 130, 246, 0.1);
     padding: 0.75rem;
@@ -134,15 +134,16 @@ header h1 {
 }
 
 .stat-card span {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--text-primary);
 }
 
 .stat-card label {
     color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-size: 1.25rem;
     font-weight: 500;
+    margin-bottom: 0;
 }
 
 .stat-card::after {
@@ -269,7 +270,7 @@ header h1 {
 
 .content-area {
     background-color: var(--card-background);
-    padding: 2rem;
+    padding: 1rem;
     border-radius: 1rem;
     box-shadow: var(--shadow-md);
 }
@@ -285,7 +286,7 @@ header h1 {
 .section h2 {
     color: var(--text-primary);
     font-size: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin: 1rem 0;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -410,7 +411,6 @@ input:focus, select:focus, textarea:focus {
 }
 
 .search-bar {
-    margin-bottom: 1.5rem;
     position: relative;
 }
 
@@ -602,13 +602,13 @@ input:focus, select:focus, textarea:focus {
     .container {
         padding: 1rem;
     }
-    
+    .sidebar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
     .header-stats {
         grid-template-columns: 1fr;
-    }
-    
-    .plot-tabs {
-        flex-direction: column;
     }
     
     .tenant-info {
@@ -1252,9 +1252,6 @@ td {
 .tenant-filter {
     margin-bottom: 20px;
     padding: 15px;
-    background: var(--card-background);
-    border-radius: 8px;
-    box-shadow: var(--shadow-sm);
 }
 
 .filter-options {
@@ -1578,4 +1575,26 @@ td {
 
 [data-theme="dark"] .action-btn:hover {
     background-color: var(--primary-color);
+}
+
+/* Section Header */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+.section-header .search-bar {
+    margin: 0;
+    min-width: 250px;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .section-header {
+    border-bottom-color: var(--border-color);
 } 
