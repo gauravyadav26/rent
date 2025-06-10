@@ -430,6 +430,7 @@ async function handleTenantFormSubmit(e) {
             startDate: document.getElementById('start-date').value,
             advancePaid: parseFloat(document.getElementById('advance-paid').value) || 0,
             monthlyRent: parseFloat(document.getElementById('monthly-rent').value) || 0,
+            startingDue: parseFloat(document.getElementById('starting-due').value) || 0,
             electricityRate: parseFloat(document.getElementById('electricity-rate').value) || 10,
             electricityReadings: [{
                 reading: parseFloat(document.getElementById('starting-electricity').value) || 0,
