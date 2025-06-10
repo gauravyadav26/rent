@@ -106,6 +106,13 @@ function initializeNavigation() {
             navButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
             
+            // Load section-specific data
+            if (targetSection === 'payment-history') {
+                loadPaymentHistory();
+            } else if (targetSection === 'tenants') {
+                loadTenants();
+            }
+            
             // Close sidebar on mobile
             const isMobile = window.innerWidth <= 768;
             if (isMobile) {
