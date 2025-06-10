@@ -302,7 +302,6 @@ function createTenantCard(tenant) {
     const monthsSinceStart = calculateMonthsDifference(tenant.startDate);
     const currentMonthBill = calculateCurrentMonthBill(tenant);
     const totalElectricityBill = calculateTotalElectricityBill(tenant);
-    const totalDue = calculateTotalDue(tenant);
     const previousDue = calculatePreviousDue(tenant);
     const lastPayment = tenant.paymentHistory?.[tenant.paymentHistory.length - 1] || { amount: 0, date: 'N/A' };
     const lastReading = tenant.electricityReadings?.[tenant.electricityReadings.length - 1] || { reading: 0, date: 'N/A' };
@@ -333,8 +332,7 @@ function createTenantCard(tenant) {
                 <div class="info-section">
                     <h4><i class="fas fa-money-bill-wave"></i> Payment Information</h4>
                     <p><strong>Current Month:</strong> ₹${Math.round(currentMonthDue)}</p>
-                    <p><strong>Previous Due:</strong> ₹${Math.round(previousDue || 0)}</p>
-                    <p><strong>Total Due:</strong> ₹${Math.round(totalDue)}</p>
+                    <p><strong>Total Due:</strong> ₹${Math.round(previousDue || 0)}</p>
                     <p><strong>Last Payment:</strong> ₹${Math.round(lastPayment.amount)} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
                 </div>
                 
@@ -378,7 +376,7 @@ function updateDashboardStats() {
     
     // Calculate total due by summing up each tenant's total due
     const totalDue = tenants.reduce((sum, tenant) => {
-        return sum + calculateTotalDue(tenant);
+        return sum + calculatePreviousDue(tenant);
     }, 0);
     
     document.getElementById('total-rent').textContent = `₹${Math.round(totalDue)}`;
@@ -484,25 +482,20 @@ function handleSearch(e) {
     displayTenants(filteredTenants);
 }
 
-// Calculate total due for a tenant
-function calculateTotalDue(tenant) {
-    const currentMonthRent = tenant.monthlyRent;
-    const currentMonthBill = calculateCurrentMonthBill(tenant);
-    const previousDue = calculatePreviousDue(tenant);
-    const startingDue = tenant.startingDue || 0;
-    return currentMonthRent + currentMonthBill + previousDue;
-}
 
 // Calculate previous due based on total months minus 1 multiplied by rent, plus total electricity bill due, minus total payments made
 function calculatePreviousDue(tenant) {
     const totalMonths = calculateMonthsDifference(tenant.startDate);
-    const previousMonths = Math.max(0, totalMonths - 1); // Total months minus current month
-    const totalRentDue = previousMonths * tenant.monthlyRent;
-    const currentMonthBill = calculateCurrentMonthBill(tenant);
+    const totalRentDue = totalMonths * tenant.monthlyRent;
+    console.log(totalRentDue);
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
+    console.log(totalElectricityDue);
     const totalPaymentsMade = calculateTotalPayments(tenant);
+    console.log(totalPaymentsMade);
     const startingDue = tenant.startingDue || 0;
-    return totalRentDue + totalElectricityDue - totalPaymentsMade - currentMonthBill + startingDue;
+    console.log(startingDue);
+    return totalRentDue + totalElectricityDue - totalPaymentsMade  + startingDue;
+    
 }
 
 // Update previous due when recording payment
