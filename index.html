@@ -68,6 +68,10 @@
                     <i class="fas fa-history"></i>
                     Payment History
                 </button>
+                <button class="nav-btn" data-section="data-management">
+                    <i class="fas fa-database"></i>
+                    Data Management
+                </button>
             </div>
 
             <div class="content-area">
@@ -141,6 +145,20 @@
                     </div>
                     <div class="payment-history-list" id="payment-history-list">
                         <!-- Payment history will be displayed here -->
+                    </div>
+                </section>
+
+                <!-- Data Management Section -->
+                <section id="data-management" class="section">
+                    <h2><i class="fas fa-database"></i> Data Management</h2>
+                    <div class="data-management-buttons">
+                        <button id="export-data" class="action-btn">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                        <label for="import-data" class="action-btn">
+                            <i class="fas fa-upload"></i> Import Data
+                            <input type="file" id="import-data" accept=".json" style="display: none;">
+                        </label>
                     </div>
                 </section>
             </div>

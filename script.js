@@ -140,6 +140,13 @@ function setupEventListeners() {
     paymentTenantSelect.addEventListener('change', loadPaymentHistory);
     paymentMonth.addEventListener('change', loadPaymentHistory);
 
+    // Data management
+    const importDataInput = document.getElementById('import-data');
+    importDataInput.addEventListener('change', handleDataImport);
+    
+    const exportDataBtn = document.getElementById('export-data');
+    exportDataBtn.addEventListener('click', handleDataExport);
+
     // Add event listener for window unload to ensure data is saved
     window.addEventListener('beforeunload', () => {
         saveAllData();
@@ -240,6 +247,56 @@ async function saveTenant(tenant) {
     }
 }
 
+async function handleDataImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        // Validate the imported data structure
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid data format: Expected an array of tenants');
+        }
+
+        // Validate each tenant object
+        for (const tenant of data) {
+            if (!tenant.id || !tenant.tenantName || !tenant.roomNumber || !tenant.startDate) {
+                throw new Error('Invalid tenant data: Missing required fields');
+            }
+        }
+
+        // Get current plot
+        const currentPlot = getCurrentPlot();
+        const plotKey = getPlotStorageKey(currentPlot);
+
+        // Save to localStorage
+        localStorage.setItem(plotKey, JSON.stringify(data));
+
+        // Save to Firebase
+        try {
+            for (const tenant of data) {
+                await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
+            }
+        } catch (error) {
+            console.error('Firebase import failed:', error);
+            alert('Warning: Data was imported locally but failed to sync with Firebase.');
+        }
+
+        // Refresh the display
+        loadTenants();
+        updateDashboardStats();
+        alert('Data imported successfully!');
+    } catch (error) {
+        console.error('Import error:', error);
+        alert('Error importing data: ' + error.message);
+    }
+
+    // Reset the file input
+    event.target.value = '';
+}
+
 // Display Functions
 function createTenantCard(tenant) {
     const monthsSinceStart = calculateMonthsDifference(tenant.startDate);
@@ -266,8 +323,8 @@ function createTenantCard(tenant) {
                 <div class="info-section">
                     <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
                     <p><strong>Room:</strong> ${tenant.roomNumber}</p>
-                    <p><strong>Start Date:</strong> ${tenant.startDate}</p>
-                    ${tenant.endDate ? `<p><strong>End Date:</strong> ${tenant.endDate}</p>` : ''}
+                    <p><strong>Start Date:</strong> ${formatDate(tenant.startDate)}</p>
+                    ${tenant.endDate ? `<p><strong>End Date:</strong> ${formatDate(tenant.endDate)}</p>` : ''}
                     <p><strong>Months Since Start:</strong> ${monthsSinceStart}</p>
                     <p><strong>Monthly Rent:</strong> ₹${tenant.monthlyRent}</p>
                     <p><strong>Advance Paid:</strong> ₹${tenant.advancePaid}</p>
@@ -275,19 +332,19 @@ function createTenantCard(tenant) {
                 
                 <div class="info-section">
                     <h4><i class="fas fa-money-bill-wave"></i> Payment Information</h4>
-                    <p><strong>Current Month:</strong> ₹${currentMonthDue}</p>
-                    <p><strong>Previous Due:</strong> ₹${previousDue || 0}</p>
-                    <p><strong>Total Due:</strong> ₹${totalDue}</p>
-                    <p><strong>Last Payment:</strong> ₹${lastPayment.amount} (${lastPayment.date})</p>
+                    <p><strong>Current Month:</strong> ₹${Math.round(currentMonthDue)}</p>
+                    <p><strong>Previous Due:</strong> ₹${Math.round(previousDue || 0)}</p>
+                    <p><strong>Total Due:</strong> ₹${Math.round(totalDue)}</p>
+                    <p><strong>Last Payment:</strong> ₹${Math.round(lastPayment.amount)} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
                 </div>
                 
                 <div class="info-section">
                     <h4><i class="fas fa-bolt"></i> Electricity Information</h4>
-                    <p><strong>Start Reading:</strong> ${startReading.reading} (${startReading.date})</p>
-                    <p><strong>Previous Reading:</strong> ${previousReading.reading} (${previousReading.date})</p>
-                    <p><strong>Latest Reading:</strong> ${lastReading.reading} (${lastReading.date})</p>
-                    <p><strong>Current Month Bill:</strong> ₹${currentMonthBill}</p>
-                    <p><strong>Total Electricity Bill:</strong> ₹${totalElectricityBill}</p>
+                    <p><strong>Start Reading:</strong> ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})</p>
+                    <p><strong>Previous Reading:</strong> ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})</p>
+                    <p><strong>Latest Reading:</strong> ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})</p>
+                    <p><strong>Current Month Bill:</strong> ₹${Math.round(currentMonthBill)}</p>
+                    <p><strong>Total Electricity Bill:</strong> ₹${Math.round(totalElectricityBill)}</p>
                 </div>
             </div>
             <div class="tenant-actions">
@@ -324,7 +381,16 @@ function updateDashboardStats() {
         return sum + calculateTotalDue(tenant);
     }, 0);
     
-    document.getElementById('total-rent').textContent = `₹${totalDue.toFixed(2)}`;
+    document.getElementById('total-rent').textContent = `₹${Math.round(totalDue)}`;
+}
+
+// Format date to dd/mm/yy
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
 }
 
 // Handle tenant form submission
@@ -1128,4 +1194,38 @@ function filterTenants(status) {
     }
     
     displayTenants(filteredTenants);
+}
+
+// Data Management Functions
+function handleDataExport() {
+    try {
+        const currentPlot = getCurrentPlot();
+        const plotKey = getPlotStorageKey(currentPlot);
+        const data = JSON.parse(localStorage.getItem(plotKey) || '[]');
+        
+        if (data.length === 0) {
+            alert('No data to export!');
+            return;
+        }
+
+        // Create a blob with the data
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        
+        // Create a download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rent_data_${currentPlot}_${new Date().toISOString().split('T')[0]}.json`;
+        
+        // Trigger the download
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting data: ' + error.message);
+    }
 }
