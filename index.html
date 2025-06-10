@@ -125,24 +125,27 @@
                             </div>
                             <div class="form-group">
                                 <label for="monthly-rent">Monthly Rent:</label>
-                                <input type="number" id="monthly-rent" required>
+                                <input type="number" id="monthly-rent" required min="0" step="0.01">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="advance-paid">Advance Paid:</label>
-                                <input type="number" id="advance-paid" required>
+                                <input type="number" id="advance-paid" required min="0" step="0.01">
                             </div>
-                        
                             <div class="form-group">
-                                <label for="starting-electricity">Starting Electricity Reading:</label>
-                                <input type="number" id="starting-electricity" required>
+                                <label for="starting-due">Starting Due Amount:</label>
+                                <input type="number" id="starting-due" value="0" min="0" step="0.01">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="electricity-rate">Electricity Rate (₹/unit):</label>
-                                <input type="number" id="electricity-rate" value="10" required>
+                                <label for="electricity-rate">Electricity Rate (per unit):</label>
+                                <input type="number" id="electricity-rate" value="10" required min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="starting-electricity">Starting Electricity Reading:</label>
+                                <input type="number" id="starting-electricity" required min="0" step="0.01">
                             </div>
                         </div>
                         <button type="submit" class="submit-btn">

@@ -394,34 +394,48 @@ function formatDate(dateString) {
 }
 
 // Handle tenant form submission
-function handleTenantFormSubmit(e) {
+async function handleTenantFormSubmit(e) {
     e.preventDefault();
     
-    const currentPlot = getCurrentPlot();
-    const tenant = {
-        id: Date.now(),
-        plotName: currentPlot,
-        roomNumber: document.getElementById('room-number').value,
-        tenantName: document.getElementById('tenant-name').value,
-        startDate: document.getElementById('start-date').value,
-        advancePaid: parseFloat(document.getElementById('advance-paid').value),
-        monthlyRent: parseFloat(document.getElementById('monthly-rent').value),
-        rentDueDate: parseInt(document.getElementById('rent-due-date').value),
-        electricityRate: parseFloat(document.getElementById('electricity-rate').value),
-        electricityReadings: [{
-            reading: parseFloat(document.getElementById('starting-electricity').value),
-            date: new Date().toISOString().split('T')[0]
-        }],
-        rentHistory: [],
-        previousDue: 0,
-        lastElectricityDue: 0
-    };
+    try {
+        const currentPlot = getCurrentPlot();
+        const tenant = {
+            id: Date.now(),
+            plotName: currentPlot,
+            roomNumber: document.getElementById('room-number').value,
+            tenantName: document.getElementById('tenant-name').value,
+            startDate: document.getElementById('start-date').value,
+            advancePaid: parseFloat(document.getElementById('advance-paid').value) || 0,
+            monthlyRent: parseFloat(document.getElementById('monthly-rent').value) || 0,
+            electricityRate: parseFloat(document.getElementById('electricity-rate').value) || 10,
+            electricityReadings: [{
+                reading: parseFloat(document.getElementById('starting-electricity').value) || 0,
+                date: new Date().toISOString().split('T')[0]
+            }],
+            paymentHistory: [],
+            previousDue: 0,
+            lastElectricityDue: 0,
+            isActive: true
+        };
 
-    saveTenant(tenant);
-    e.target.reset();
-    alert('Tenant added successfully!');
-    loadTenants();
-    updateDashboardStats();
+        // Validate required fields
+        if (!tenant.roomNumber || !tenant.tenantName || !tenant.startDate) {
+            throw new Error('Please fill in all required fields');
+        }
+
+        // Save tenant data
+        await saveTenant(tenant);
+        
+        // Reset form and update display
+        e.target.reset();
+        await loadTenants();
+        updateDashboardStats();
+        
+        alert('Tenant added successfully!');
+    } catch (error) {
+        console.error('Error adding tenant:', error);
+        alert(error.message || 'Error adding tenant. Please try again.');
+    }
 }
 
 // Update the display function with improved tenant information
@@ -475,6 +489,7 @@ function calculateTotalDue(tenant) {
     const currentMonthRent = tenant.monthlyRent;
     const currentMonthBill = calculateCurrentMonthBill(tenant);
     const previousDue = calculatePreviousDue(tenant);
+    const startingDue = tenant.startingDue || 0;
     return currentMonthRent + currentMonthBill + previousDue;
 }
 
@@ -486,7 +501,8 @@ function calculatePreviousDue(tenant) {
     const currentMonthBill = calculateCurrentMonthBill(tenant);
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
     const totalPaymentsMade = calculateTotalPayments(tenant);
-    return totalRentDue + totalElectricityDue - totalPaymentsMade - currentMonthBill;
+    const startingDue = tenant.startingDue || 0;
+    return totalRentDue + totalElectricityDue - totalPaymentsMade - currentMonthBill + startingDue;
 }
 
 // Update previous due when recording payment
@@ -868,6 +884,10 @@ function editTenant(tenantId) {
                     <label for="editElectricityRate">Electricity Rate (per unit)</label>
                     <input type="number" id="editElectricityRate" value="${tenant.electricityRate || DEFAULT_ELECTRICITY_RATE}" required min="0" step="0.01">
                 </div>
+                <div class="form-group">
+                    <label for="editStartingDue">Starting Due Amount</label>
+                    <input type="number" id="editStartingDue" value="${tenant.startingDue || 0}" min="0" step="0.01">
+                </div>
             </div>
             <div class="edit-form-footer">
                 <button type="button" class="cancel-btn" onclick="closeEditForm()">
@@ -891,6 +911,7 @@ function editTenant(tenantId) {
         tenant.monthlyRent = parseFloat(document.getElementById('editMonthlyRent').value);
         tenant.advancePaid = parseFloat(document.getElementById('editAdvancePaid').value);
         tenant.electricityRate = parseFloat(document.getElementById('editElectricityRate').value);
+        tenant.startingDue = parseFloat(document.getElementById('editStartingDue').value) || 0;
 
         // Save tenant data
         await saveTenant(tenant);
