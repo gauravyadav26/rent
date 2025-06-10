@@ -439,11 +439,6 @@ input:focus, select:focus, textarea:focus {
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
     margin-bottom: 1rem;
-    animation: scaleIn 0.4s ease-out;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    animation: pulseGlow 3s infinite;
 }
 
 .tenant-card:hover {
@@ -1649,9 +1644,167 @@ td {
 }
 
 .total-due-amount {
-    background-color: #ff4444;
+    background-color: #4f46e5;
     color: white;
     padding: 2px 8px;
     border-radius: 4px;
     font-weight: bold;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced View Transitions */
+@keyframes viewTransitionIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes viewTransitionOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Apply enhanced transitions to main sections */
+#tenants, #payment-history, #settings {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced form transitions */
+.edit-form-container, .payment-form, .add-tenant-form {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+/* Add tenant form specific transitions */
+.add-tenant-form {
+    animation: slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-tenant-form .form-group {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    animation-fill-mode: both;
+}
+
+.add-tenant-form .form-group:nth-child(1) { animation-delay: 0.1s; }
+.add-tenant-form .form-group:nth-child(2) { animation-delay: 0.2s; }
+.add-tenant-form .form-group:nth-child(3) { animation-delay: 0.3s; }
+.add-tenant-form .form-group:nth-child(4) { animation-delay: 0.4s; }
+.add-tenant-form .form-group:nth-child(5) { animation-delay: 0.5s; }
+.add-tenant-form .form-group:nth-child(6) { animation-delay: 0.6s; }
+
+/* Data management transitions */
+.data-management-section {
+    animation: slideInLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.data-management-section .section-header {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.data-management-section .action-buttons {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    animation-delay: 0.2s;
+}
+
+/* Enhanced section transitions */
+.section {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced dashboard transitions */
+.dashboard-stats {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    animation-fill-mode: both;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+
+/* Enhanced search bar transitions */
+.search-bar {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced button transitions */
+.tenant-actions button {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tenant-actions button:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced dark theme transitions */
+[data-theme="dark"] {
+    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced form input transitions */
+input, select, textarea {
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input:focus, select:focus, textarea:focus {
+    transform: scale(1.02);
+}
+
+/* Enhanced loading state transitions */
+.loading {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced error state transitions */
+.error-message {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top;
+}
+
+/* Enhanced success state transitions */
+.success-message {
+    animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top;
 } 
