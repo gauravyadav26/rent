@@ -142,6 +142,10 @@ function initializePlotTabs() {
             // Load tenants for selected plot
             loadTenants();
             updateDashboardStats();
+            // Refresh payment history if it's currently visible
+            if (document.getElementById('payment-history').style.display === 'block') {
+                loadPaymentHistory();
+            }
         });
     });
 }
