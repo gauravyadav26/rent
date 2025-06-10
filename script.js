@@ -332,7 +332,7 @@ function createTenantCard(tenant) {
                 <div class="info-section">
                     <h4><i class="fas fa-money-bill-wave"></i> Payment Information</h4>
                     <p><strong>Current Month:</strong> ₹${Math.round(currentMonthDue)}</p>
-                    <p><strong>Total Due:</strong> ₹${Math.round(previousDue || 0)}</p>
+                    <p><strong>Total Due:</strong> <span class="total-due-amount">₹${Math.round(previousDue || 0)}</span></p>
                     <p><strong>Last Payment:</strong> ₹${Math.round(lastPayment.amount)} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
                 </div>
                 

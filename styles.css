@@ -1646,4 +1646,12 @@ td {
 /* Dark theme adjustments */
 [data-theme="dark"] .section-header {
     border-bottom-color: var(--border-color);
+}
+
+.total-due-amount {
+    background-color: #ff4444;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
 } 
