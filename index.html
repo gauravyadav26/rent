@@ -194,30 +194,85 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
     <script>
-        // Register service worker
+        // Debug function
+        function debug(message) {
+            console.log(`[PWA Debug] ${message}`);
+            // Also show on screen for easier debugging
+            const debugDiv = document.createElement('div');
+            debugDiv.style.position = 'fixed';
+            debugDiv.style.bottom = '10px';
+            debugDiv.style.right = '10px';
+            debugDiv.style.background = 'rgba(0,0,0,0.8)';
+            debugDiv.style.color = 'white';
+            debugDiv.style.padding = '10px';
+            debugDiv.style.borderRadius = '5px';
+            debugDiv.style.zIndex = '9999';
+            debugDiv.textContent = message;
+            document.body.appendChild(debugDiv);
+            setTimeout(() => debugDiv.remove(), 5000);
+        }
+
+        // Check if service workers are supported
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const registration = await navigator.serviceWorker.register('./sw.js', {
-                        scope: './'
-                    });
-                    console.log('ServiceWorker registration successful with scope:', registration.scope);
-                    
-                    // Check for updates
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('Service Worker update found!');
-                        
-                        newWorker.addEventListener('statechange', () => {
-                            console.log('Service Worker state:', newWorker.state);
+            debug('Service Workers are supported');
+            
+            // Check if the page is served over HTTPS
+            if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+                debug('Page is served over HTTPS or localhost');
+                
+                window.addEventListener('load', async () => {
+                    try {
+                        debug('Attempting to register service worker...');
+                        const registration = await navigator.serviceWorker.register('./sw.js', {
+                            scope: './'
                         });
-                    });
-                } catch (error) {
-                    console.error('ServiceWorker registration failed:', error);
-                }
-            });
+                        
+                        debug(`Service Worker registered successfully with scope: ${registration.scope}`);
+                        
+                        // Check if the service worker is active
+                        if (registration.active) {
+                            debug('Service Worker is active');
+                        } else {
+                            debug('Service Worker is not active yet');
+                        }
+
+                        // Listen for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            debug('Service Worker update found!');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                debug(`Service Worker state changed to: ${newWorker.state}`);
+                            });
+                        });
+
+                        // Check if the manifest is loaded
+                        const manifestLink = document.querySelector('link[rel="manifest"]');
+                        if (manifestLink) {
+                            debug('Manifest link found');
+                            fetch(manifestLink.href)
+                                .then(response => response.json())
+                                .then(manifest => {
+                                    debug('Manifest loaded successfully');
+                                    console.log('Manifest:', manifest);
+                                })
+                                .catch(error => {
+                                    debug('Error loading manifest: ' + error.message);
+                                });
+                        } else {
+                            debug('Manifest link not found!');
+                        }
+
+                    } catch (error) {
+                        debug('Service Worker registration failed: ' + error.message);
+                        console.error('Service Worker registration failed:', error);
+                    }
+                });
+            } else {
+                debug('Page is not served over HTTPS. PWA requires HTTPS.');
+            }
         } else {
-            console.log('Service Workers not supported');
+            debug('Service Workers are not supported in this browser');
         }
     </script>
 </body>
