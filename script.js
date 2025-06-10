@@ -617,7 +617,16 @@ function loadPaymentHistory() {
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     const selectedTenant = document.getElementById('payment-tenant-select').value;
-    const selectedMonth = document.getElementById('payment-month').value;
+    
+    // Set current month by default if not already set
+    const monthInput = document.getElementById('payment-month');
+    if (!monthInput.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${year}-${month}`;
+    }
+    const selectedMonth = monthInput.value;
 
     const paymentHistoryList = document.getElementById('payment-history-list');
     paymentHistoryList.innerHTML = '';
@@ -652,13 +661,10 @@ function loadPaymentHistory() {
     // Update payment summaries
     document.getElementById('total-payments').textContent = `₹${formatIndianNumber(Math.round(totalAmount))}`;
     
+    // Always show monthly summary since we're showing current month by default
     const monthlySummary = document.getElementById('monthly-summary');
-    if (selectedMonth) {
-        monthlySummary.style.display = 'block';
-        document.getElementById('monthly-payments').textContent = `₹${formatIndianNumber(Math.round(monthlyAmount))}`;
-    } else {
-        monthlySummary.style.display = 'none';
-    }
+    monthlySummary.style.display = 'block';
+    document.getElementById('monthly-payments').textContent = `₹${formatIndianNumber(Math.round(monthlyAmount))}`;
 
     if (allPayments.length === 0) {
         paymentHistoryList.innerHTML = '<p class="no-tenants">No payment history found.</p>';
