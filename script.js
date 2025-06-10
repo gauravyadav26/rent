@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeTheme();
     addThemeToggle();
     addTenantStatusFilter();
+    initializeSidebar();
 
     // Set tenants tab as active by default
     const tenantsTab = document.querySelector('.nav-btn[data-section="tenants"]');
@@ -84,25 +85,39 @@ function loadTenants() {
     updateTenantSelect(tenants);
 }
 
-// Navigation functionality
+// Initialize navigation
 function initializeNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
+    const sections = document.querySelectorAll('.section');
+    
     navButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Remove active class from all buttons and sections
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            const targetSection = button.getAttribute('data-section');
             
-            // Add active class to clicked button and corresponding section
+            // Hide all sections
+            sections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show target section
+            document.getElementById(targetSection).style.display = 'block';
+            
+            // Update active state
+            navButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
-            const sectionId = button.getAttribute('data-section');
-            document.getElementById(sectionId).classList.add('active');
-
-            // Load section-specific data
-            if (sectionId === 'payment-history') {
-                loadPaymentHistory();
-            } else if (sectionId === 'tenants') {
-                loadTenants();
+            
+            // Close sidebar on mobile
+            const isMobile = window.innerWidth <= 768;
+            if (isMobile) {
+                const sidebar = document.querySelector('.sidebar');
+                const contentArea = document.querySelector('.content-area');
+                const sidebarToggle = document.getElementById('sidebar-toggle');
+                const icon = sidebarToggle.querySelector('i');
+                
+                sidebar.classList.remove('active');
+                contentArea.classList.remove('sidebar-active');
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
             }
         });
     });
@@ -1323,4 +1338,62 @@ function calculateCurrentMonthPayments() {
     
     // Update the display with rounded number in Indian format
     document.getElementById('current-month-payments').textContent = `₹${formatIndianNumber(Math.round(totalPayments))}`;
+}
+
+// Initialize sidebar toggle
+function initializeSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const contentArea = document.querySelector('.content-area');
+    
+    // Check if we're on mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    // Set initial state
+    if (isMobile) {
+        sidebar.classList.remove('active');
+        contentArea.classList.remove('sidebar-active');
+    }
+    
+    // Toggle sidebar
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+        contentArea.classList.toggle('sidebar-active');
+        
+        // Update toggle icon
+        const icon = sidebarToggle.querySelector('i');
+        if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (isMobile && 
+            !sidebar.contains(e.target) && 
+            !sidebarToggle.contains(e.target) && 
+            sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+            contentArea.classList.remove('sidebar-active');
+            const icon = sidebarToggle.querySelector('i');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) {
+            sidebar.classList.remove('active');
+            contentArea.classList.remove('sidebar-active');
+            const icon = sidebarToggle.querySelector('i');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    });
 }

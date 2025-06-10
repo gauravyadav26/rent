@@ -230,11 +230,36 @@ header h1 {
 }
 
 .sidebar {
-    background-color: var(--card-background);
-    padding: 1.5rem;
-    border-radius: 1rem;
+    background: var(--card-background);
+    padding: 1rem;
+    border-radius: 0.75rem;
     box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    position: relative;
     height: fit-content;
+}
+
+.sidebar-toggle {
+    display: none;
+    position: absolute;
+    right: -40px;
+    top: 10px;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-left: none;
+    padding: 8px;
+    border-radius: 0 0.5rem 0.5rem 0;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.sidebar-toggle i {
+    color: var(--text-primary);
+    font-size: 1.2rem;
 }
 
 .nav-btn {
@@ -591,13 +616,27 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 768px) {
+    .plot-tabs{margin-top: 2.5rem;}
     .container {
         padding: .5rem;
     }
     .sidebar {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        position: fixed;
+        left: -282px;
+        top: 0;
+        width: 250px;
+        z-index: 100;
+        background: var(--card-background);
+        padding-top: 3rem;
+    }
+    .sidebar.active {
+        left: 0;
+    }
+    .sidebar-toggle {
+        display: block;
+    }
+    .content-area {
+        margin-left: 0;
     }
     .header-stats {
         grid-template-columns: 1fr;
