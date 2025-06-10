@@ -588,11 +588,10 @@ async function deleteTenant(tenantId) {
 
     // Save to Firebase
     try {
-        const plotRef = ref(database, `plots/${currentPlot}/tenants`);
-        await set(plotRef, updatedTenants);
+        await db.collection('tenants').doc(tenantId.toString()).delete();
     } catch (error) {
-        console.error('Error saving to Firebase:', error);
-        alert('Error saving to database. Please try again.');
+        console.error('Error deleting from Firebase:', error);
+        alert('Error deleting from database. Please try again.');
         return;
     }
 
