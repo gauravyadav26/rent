@@ -320,7 +320,7 @@ function createTenantCard(tenant) {
                 </span>
             </h3>
             <div class="tenant-info">
-                <div class="info-section">
+                <div class="info-section" data-section="basic-info">
                     <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
                     <p><strong>Room:</strong> ${tenant.roomNumber}</p>
                     <p><strong>Start Date:</strong> ${formatDate(tenant.startDate)}</p>
@@ -338,7 +338,7 @@ function createTenantCard(tenant) {
                     <p><strong>Last Payment:</strong> ₹${Math.round(lastPayment.amount)} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
                 </div>
                 
-                <div class="info-section">
+                <div class="info-section" data-section="electricity">
                     <h4><i class="fas fa-bolt"></i> Electricity Information</h4>
                     <p><strong>Start Reading:</strong> ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})</p>
                     <p><strong>Previous Reading:</strong> ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})</p>
@@ -1229,3 +1229,14 @@ function handleDataExport() {
         alert('Error exporting data: ' + error.message);
     }
 }
+
+// Add this at the end of the file
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for collapsible sections
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.info-section[data-section="basic-info"] h4, .info-section[data-section="electricity"] h4')) {
+            const section = e.target.parentElement;
+            section.classList.toggle('expanded');
+        }
+    });
+});
