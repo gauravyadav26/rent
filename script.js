@@ -180,7 +180,7 @@ function setupEventListeners() {
 }
 
 // Constants
-const PLOTS = ['Home', 'Baba', 'Shop', 'Others'];
+const PLOTS = ['home', 'baba', 'shop', 'others'];
 const DEFAULT_ELECTRICITY_RATE = 10;
 
 // Utility Functions
