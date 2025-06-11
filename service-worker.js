@@ -6,152 +6,115 @@ const urlsToCache = [
     '/script.js',
     '/manifest.json',
     '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png'
+    '/icons/icon-512x512.png',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
-// Install service worker and cache assets
+// --- Install: Cache static assets ---
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
-            })
+            .then(cache => cache.addAll(urlsToCache))
+            .catch(err => console.log('Cache installation failed:', err))
     );
 });
 
-// Activate and clean up old caches
+// --- Activate: Clean up old caches ---
 self.addEventListener('activate', event => {
     event.waitUntil(
-        Promise.all([
-            // Take control of all clients
-            clients.claim(),
-            // Clean up old caches
-            caches.keys().then(cacheNames => {
-                return Promise.all(
-                    cacheNames.map(cacheName => {
-                        if (cacheName !== CACHE_NAME) {
-                            console.log('Deleting old cache:', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
-        ])
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
     );
 });
 
-// Check if URL scheme is supported for caching
-function isCacheable(request) {
+// --- Check if request should bypass caching ---
+function shouldBypass(request) {
     const url = new URL(request.url);
-    // Skip caching for unsupported schemes
-    if (url.protocol === 'chrome-extension:' || 
-        url.protocol === 'chrome:' || 
-        url.protocol === 'data:' || 
-        url.protocol === 'blob:') {
-        return false;
-    }
-    return true;
-}
 
-// Check if request should bypass service worker
-function shouldBypassServiceWorker(request) {
-    const url = new URL(request.url);
-    
-    // Bypass Firestore listen channel
-    if (url.pathname.includes('/Listen/channel')) {
+    // Skip non-HTTP(S) requests
+    if (!['http:', 'https:'].includes(url.protocol)) {
         return true;
     }
-    
-    // Existing checks...
-    if (request.headers.has('x-firestore-client') || 
-        request.headers.has('x-firebase-client') || 
-        request.headers.has('x-goog-api-client') ||
+
+    // Skip Firestore/Firebase real-time connections
+    if (
+        url.hostname.includes('firestore.googleapis.com') ||
+        url.pathname.includes('/Listen/channel') ||
         request.headers.get('upgrade') === 'websocket' ||
-        request.headers.get('accept')?.includes('text/event-stream')) {
+        request.headers.get('accept')?.includes('text/event-stream')
+    ) {
+        return true;
+    }
+
+    // Skip dynamic API requests (adjust if needed)
+    if (url.pathname.startsWith('/api/')) {
         return true;
     }
 
     return false;
 }
 
-// Fetch resources
+// --- Fetch: Serve from cache or network ---
 self.addEventListener('fetch', event => {
     const request = event.request;
-    const url = new URL(request.url);
 
-    // Network-first approach for Firestore requests
-    if (url.hostname === 'firestore.googleapis.com') {
-        event.respondWith(fetch(request));
-        return;
-    }
-    
-    // Bypass service worker for specific requests
-    if (shouldBypassServiceWorker(request)) {
+    // Bypass for non-cacheable requests
+    if (shouldBypass(request)) {
         event.respondWith(fetch(request));
         return;
     }
 
-    // Skip caching for unsupported schemes
-    if (!isCacheable(request)) {
-        event.respondWith(fetch(request));
-        return;
-    }
-
-    // Handle navigation requests
+    // Handle navigation requests (fallback to index.html)
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
-                .catch(() => {
-                    return caches.match('/index.html');
-                })
+            fetch(request).catch(() => caches.match('/index.html'))
         );
         return;
     }
 
-    // For all other requests
+    // For all other requests: Cache-first strategy
     event.respondWith(
-        caches.match(request)
-            .then(response => {
-                if (response) {
-                    return response;
+        caches.match(request).then(cachedResponse => {
+            // Return cached response if found
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+
+            // Fetch from network and cache if successful
+            return fetch(request).then(networkResponse => {
+                if (!networkResponse || networkResponse.status !== 200) {
+                    return networkResponse;
                 }
 
-                return fetch(request, {
-                    mode: 'cors',
-                    credentials: 'omit'
-                })
-                    .then(response => {
-                        if (!response || response.status !== 200) {
-                            return response;
-                        }
-
-                        // Only cache if the request is cacheable
-                        if (isCacheable(request)) {
-                            const responseToCache = response.clone();
-                            caches.open(CACHE_NAME)
-                                .then(cache => {
-                                    cache.put(request, responseToCache);
-                                })
-                                .catch(error => {
-                                    console.error('Cache put failed:', error);
-                                });
-                        }
-
-                        return response;
-                    })
-                    .catch(error => {
-                        console.error('Fetch failed:', error);
-                        // If fetch fails, try to serve from cache
-                        return caches.match(request);
+                // Clone and cache the response
+                const responseToCache = networkResponse.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(request, responseToCache).catch(err => {
+                        console.log('Failed to cache:', request.url, err);
                     });
-            })
+                });
+
+                return networkResponse;
+            }).catch(() => {
+                // Optional: Return a fallback response here if needed
+                return new Response('Offline fallback content', {
+                    headers: { 'Content-Type': 'text/plain' }
+                });
+            });
+        })
     );
 });
 
-// Listen for skipWaiting
+// --- Skip waiting on update ---
 self.addEventListener('message', event => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
     }
-}); 
+});
