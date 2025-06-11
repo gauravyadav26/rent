@@ -14,6 +14,9 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
+// Add at the top of the file after Firebase config
+let currentSearchTerm = '';
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     initializeNavigation();
@@ -81,7 +84,14 @@ function loadTenants() {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    displayTenants(tenants);
+    
+    // Apply search filter if exists
+    const filteredTenants = currentSearchTerm ? tenants.filter(tenant => 
+        tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
+        tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
+    ) : tenants;
+    
+    displayTenants(filteredTenants);
     updateTenantSelect(tenants);
 }
 
@@ -514,14 +524,14 @@ function updateTenantSelect(tenants) {
 
 // Handle search functionality
 function handleSearch(e) {
-    const searchTerm = e.target.value.toLowerCase();
+    currentSearchTerm = e.target.value.toLowerCase();
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
     const filteredTenants = tenants.filter(tenant => 
-        tenant.tenantName.toLowerCase().includes(searchTerm) ||
-        tenant.roomNumber.toLowerCase().includes(searchTerm)
+        tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
+        tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
     );
     
     displayTenants(filteredTenants);
@@ -587,6 +597,8 @@ function recordPayment(tenantId) {
         </div>
     `;
 
+    document.body.appendChild(form);
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         const amount = parseFloat(document.getElementById('paymentAmount').value);
@@ -613,8 +625,6 @@ function recordPayment(tenantId) {
         loadTenants();
         updateDashboardStats();
     });
-
-    document.body.appendChild(form);
 }
 
 function closePaymentForm() {

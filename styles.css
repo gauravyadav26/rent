@@ -1749,7 +1749,7 @@ td {
 }
 
 /* Enhanced form transitions */
-.edit-form-container, .payment-form, .add-tenant-form {
+.edit-form-container, .add-tenant-form {
     animation: viewTransitionIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     transform-origin: center;
 }
