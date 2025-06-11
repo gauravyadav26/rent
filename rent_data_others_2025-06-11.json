@@ -1,0 +1,548 @@
+[
+  {
+    "id": 1749636550759,
+    "plotName": "others",
+    "roomNumber": "1",
+    "tenantName": "P1",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3042,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749636587087,
+    "plotName": "others",
+    "roomNumber": "2",
+    "tenantName": "P2",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 50,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 120,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749636616474,
+    "plotName": "others",
+    "roomNumber": "3",
+    "tenantName": "P3",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3229,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749636641486,
+    "plotName": "others",
+    "roomNumber": "4",
+    "tenantName": "P4",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 5166,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749636967221,
+    "plotName": "others",
+    "roomNumber": "5",
+    "tenantName": "P5",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 1974,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749636996267,
+    "plotName": "others",
+    "roomNumber": "6",
+    "tenantName": "P6",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 6498,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637025916,
+    "plotName": "others",
+    "roomNumber": "7",
+    "tenantName": "P7",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 6449,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637083860,
+    "plotName": "others",
+    "roomNumber": "8",
+    "tenantName": "P8",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 94,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637118184,
+    "plotName": "others",
+    "roomNumber": "9",
+    "tenantName": "P9",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3873,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637163972,
+    "plotName": "others",
+    "roomNumber": "10",
+    "tenantName": "P10",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 90,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 5693,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637187950,
+    "plotName": "others",
+    "roomNumber": "11",
+    "tenantName": "P11",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 40,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637214675,
+    "plotName": "others",
+    "roomNumber": "12",
+    "tenantName": "P12",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 0,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637335640,
+    "plotName": "others",
+    "roomNumber": "PO1",
+    "tenantName": "PO1",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 2426,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637367603,
+    "plotName": "others",
+    "roomNumber": "PO2",
+    "tenantName": "PO2",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 1194,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637395922,
+    "plotName": "others",
+    "roomNumber": "PO3",
+    "tenantName": "PO3",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 2447,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637490613,
+    "plotName": "others",
+    "roomNumber": "PO4",
+    "tenantName": "Shambhu",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 80,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 2011,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637569744,
+    "plotName": "others",
+    "roomNumber": "H1",
+    "tenantName": "Mohan",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3121,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637571508,
+    "plotName": "others",
+    "roomNumber": "H1",
+    "tenantName": "Mohan",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3121,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637577987,
+    "plotName": "others",
+    "roomNumber": "H1",
+    "tenantName": "Mohan",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3121,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637610560,
+    "plotName": "others",
+    "roomNumber": "H2",
+    "tenantName": "Mohan 2",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 1174,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637646087,
+    "plotName": "others",
+    "roomNumber": "H3",
+    "tenantName": "Sadhan",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 2852,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637704449,
+    "plotName": "others",
+    "roomNumber": "H4",
+    "tenantName": "Sadhan Son",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 1380,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3180,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637742610,
+    "plotName": "others",
+    "roomNumber": "H5",
+    "tenantName": "Sukku",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 790,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 1054,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637875136,
+    "plotName": "others",
+    "roomNumber": "H6",
+    "tenantName": "Uttam",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 2330,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 39,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637878442,
+    "plotName": "others",
+    "roomNumber": "H6",
+    "tenantName": "Uttam",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 2330,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 39,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "id": 1749637915254,
+    "plotName": "others",
+    "roomNumber": "H7",
+    "tenantName": "Madhai",
+    "startDate": "2025-06-01",
+    "advancePaid": 0,
+    "monthlyRent": 0,
+    "startingDue": 0,
+    "electricityRate": 10,
+    "electricityReadings": [
+      {
+        "reading": 3828,
+        "date": "2025-06-11"
+      }
+    ],
+    "paymentHistory": [],
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
+  }
+]
