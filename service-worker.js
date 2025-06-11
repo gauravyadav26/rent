@@ -9,6 +9,13 @@ const urlsToCache = [
     '/icons/icon-512x512.png'
 ];
 
+// URLs that should not be cached
+const NO_CACHE_URLS = [
+    'firestore.googleapis.com',
+    'firebase.googleapis.com',
+    'googleapis.com'
+];
+
 // Install service worker and cache assets
 self.addEventListener('install', event => {
     event.waitUntil(
@@ -38,6 +45,11 @@ self.addEventListener('activate', event => {
 
 // Fetch resources
 self.addEventListener('fetch', event => {
+    // Skip caching for Firebase URLs
+    if (NO_CACHE_URLS.some(url => event.request.url.includes(url))) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then(response => {
