@@ -10,8 +10,8 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
-// URLs that should not be cached
-const NO_CACHE_URLS = [
+// URLs that should not be handled by service worker
+const NO_SW_URLS = [
     'firestore.googleapis.com',
     'firebase.googleapis.com',
     'googleapis.com'
@@ -48,10 +48,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
     
-    // Skip caching for Firebase URLs
-    if (NO_CACHE_URLS.some(url => requestUrl.hostname.includes(url))) {
-        // For Firebase URLs, just pass through the request without caching
-        event.respondWith(fetch(event.request));
+    // Skip service worker completely for Firebase URLs
+    if (NO_SW_URLS.some(url => requestUrl.hostname.includes(url))) {
         return;
     }
 
