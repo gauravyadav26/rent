@@ -6,7 +6,7 @@ const firebaseConfig = {
     storageBucket: "rent-ec3f3.firebasestorage.app",
     messagingSenderId: "60600802638",
     appId: "1:60600802638:web:98b79bba0b1c971c72921f"
-  };
+};
 
 // Initialize Firebase
 if (!firebase.apps.length) {
@@ -16,6 +16,52 @@ const db = firebase.firestore();
 
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
+
+// Register service worker and handle updates
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('ServiceWorker registration successful');
+
+            // Check for updates every hour
+            setInterval(async () => {
+                try {
+                    await registration.update();
+                } catch (error) {
+                    console.error('ServiceWorker update check failed:', error);
+                }
+            }, 60 * 60 * 1000); // Check every hour
+
+            // Listen for updates
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New version available
+                        showUpdateNotification();
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('ServiceWorker registration failed:', error);
+        }
+    });
+}
+
+// Show update notification
+function showUpdateNotification() {
+    const notification = document.createElement('div');
+    notification.className = 'update-notification';
+    notification.innerHTML = `
+        <div class="update-content">
+            <i class="fas fa-sync"></i>
+            <span>A new version is available!</span>
+            <button onclick="window.location.reload()">Update Now</button>
+        </div>
+    `;
+    document.body.appendChild(notification);
+}
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
@@ -44,6 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('Firebase is ready to sync data');
                     // Load data from Firebase in the background
                     loadTenantsFromFirebase();
+                    
+                    // Set up periodic data refresh
+                    setupPeriodicRefresh();
                 } else {
                     console.error('Firebase permissions not properly configured');
                 }
@@ -53,6 +102,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Set up periodic data refresh
+function setupPeriodicRefresh() {
+    // Refresh data every 5 minutes
+    setInterval(async () => {
+        try {
+            await loadTenantsFromFirebase();
+            console.log('Data refreshed successfully');
+        } catch (error) {
+            console.error('Data refresh failed:', error);
+        }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Also refresh when the window regains focus
+    window.addEventListener('focus', async () => {
+        try {
+            await loadTenantsFromFirebase();
+            console.log('Data refreshed on window focus');
+        } catch (error) {
+            console.error('Data refresh failed on window focus:', error);
+        }
+    });
+}
 
 // Load tenants from Firestore in the background
 async function loadTenantsFromFirebase() {
