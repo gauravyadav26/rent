@@ -17,7 +17,7 @@ const db = firebase.firestore();
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
 
-// Register service worker and handle updates
+// Register service worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
@@ -25,31 +25,6 @@ if ('serviceWorker' in navigator) {
                 updateViaCache: 'none'
             });
             console.log('ServiceWorker registration successful');
-
-            // Check for updates every hour
-            setInterval(async () => {
-                try {
-                    await registration.update();
-                } catch (error) {
-                    console.error('ServiceWorker update check failed:', error);
-                }
-            }, 60 * 60 * 1000); // Check every hour
-
-            // Listen for updates
-            registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed') {
-                        if (navigator.serviceWorker.controller) {
-                            // New version available
-                            showUpdateNotification();
-                        } else {
-                            // First time installation
-                            console.log('Service Worker installed for the first time');
-                        }
-                    }
-                });
-            });
 
             // Handle controller change
             let refreshing = false;
@@ -63,31 +38,6 @@ if ('serviceWorker' in navigator) {
             console.error('ServiceWorker registration failed:', error);
         }
     });
-}
-
-// Show update notification
-function showUpdateNotification() {
-    // Remove any existing notification
-    const existingNotification = document.querySelector('.update-notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
-
-    const notification = document.createElement('div');
-    notification.className = 'update-notification';
-    notification.innerHTML = `
-        <div class="update-content">
-            <i class="fas fa-sync"></i>
-            <span>A new version is available!</span>
-            <button onclick="window.location.reload()">Update Now</button>
-        </div>
-    `;
-    document.body.appendChild(notification);
-
-    // Auto-hide notification after 10 seconds
-    setTimeout(() => {
-        notification.remove();
-    }, 10000);
 }
 
 // Initialize the application

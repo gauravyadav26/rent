@@ -42,14 +42,28 @@ self.addEventListener('activate', event => {
     );
 });
 
+// Check if URL scheme is supported for caching
+function isCacheable(request) {
+    const url = new URL(request.url);
+    // Skip caching for unsupported schemes
+    if (url.protocol === 'chrome-extension:' || 
+        url.protocol === 'chrome:' || 
+        url.protocol === 'data:' || 
+        url.protocol === 'blob:') {
+        return false;
+    }
+    return true;
+}
+
 // Fetch resources
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
     
-    // Skip service worker for Firebase URLs
+    // Skip service worker for Firebase URLs and unsupported schemes
     if (requestUrl.hostname.includes('firestore.googleapis.com') ||
         requestUrl.hostname.includes('firebase.googleapis.com') ||
-        requestUrl.hostname.includes('googleapis.com')) {
+        requestUrl.hostname.includes('googleapis.com') ||
+        !isCacheable(event.request)) {
         return;
     }
 
@@ -78,11 +92,14 @@ self.addEventListener('fetch', event => {
                             return response;
                         }
 
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
+                        // Only cache if the request is cacheable
+                        if (isCacheable(event.request)) {
+                            const responseToCache = response.clone();
+                            caches.open(CACHE_NAME)
+                                .then(cache => {
+                                    cache.put(event.request, responseToCache);
+                                });
+                        }
 
                         return response;
                     })
