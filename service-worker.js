@@ -55,34 +55,56 @@ function isCacheable(request) {
     return true;
 }
 
-// Check if request is Firebase related
-function isFirebaseRequest(url) {
-    return url.hostname.includes('firestore.googleapis.com') ||
-           url.hostname.includes('firebase.googleapis.com') ||
-           url.hostname.includes('googleapis.com') ||
-           url.hostname.includes('firebasestorage.app');
+// Check if request should bypass service worker
+function shouldBypassServiceWorker(request) {
+    // Check for Firestore specific headers
+    if (request.headers.has('x-firestore-client')) {
+        return true;
+    }
+
+    // Check for Firebase specific headers
+    if (request.headers.has('x-firebase-client')) {
+        return true;
+    }
+
+    // Check for Google API specific headers
+    if (request.headers.has('x-goog-api-client')) {
+        return true;
+    }
+
+    // Check for WebSocket upgrade requests
+    if (request.headers.get('upgrade') === 'websocket') {
+        return true;
+    }
+
+    // Check for streaming requests
+    if (request.headers.get('accept')?.includes('text/event-stream')) {
+        return true;
+    }
+
+    return false;
 }
 
 // Fetch resources
 self.addEventListener('fetch', event => {
-    const requestUrl = new URL(event.request.url);
+    const request = event.request;
     
-    // Completely bypass service worker for Firebase requests
-    if (isFirebaseRequest(requestUrl)) {
-        event.respondWith(fetch(event.request));
+    // Bypass service worker for specific requests
+    if (shouldBypassServiceWorker(request)) {
+        event.respondWith(fetch(request));
         return;
     }
 
     // Skip caching for unsupported schemes
-    if (!isCacheable(event.request)) {
-        event.respondWith(fetch(event.request));
+    if (!isCacheable(request)) {
+        event.respondWith(fetch(request));
         return;
     }
 
     // Handle navigation requests
-    if (event.request.mode === 'navigate') {
+    if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request)
+            fetch(request)
                 .catch(() => {
                     return caches.match('/index.html');
                 })
@@ -92,24 +114,24 @@ self.addEventListener('fetch', event => {
 
     // For all other requests
     event.respondWith(
-        caches.match(event.request)
+        caches.match(request)
             .then(response => {
                 if (response) {
                     return response;
                 }
 
-                return fetch(event.request)
+                return fetch(request)
                     .then(response => {
                         if (!response || response.status !== 200) {
                             return response;
                         }
 
                         // Only cache if the request is cacheable
-                        if (isCacheable(event.request)) {
+                        if (isCacheable(request)) {
                             const responseToCache = response.clone();
                             caches.open(CACHE_NAME)
                                 .then(cache => {
-                                    cache.put(event.request, responseToCache);
+                                    cache.put(request, responseToCache);
                                 });
                         }
 
@@ -117,7 +139,7 @@ self.addEventListener('fetch', event => {
                     })
                     .catch(() => {
                         // If fetch fails, try to serve from cache
-                        return caches.match(event.request);
+                        return caches.match(request);
                     });
             })
     );

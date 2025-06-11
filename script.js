@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Set up periodic data refresh
 function setupPeriodicRefresh() {
-    // Refresh data every 5 minutes
+    // Refresh data every 15 minutes
     setInterval(async () => {
         try {
             await loadTenantsFromFirebase();
@@ -98,17 +98,7 @@ function setupPeriodicRefresh() {
         } catch (error) {
             console.error('Data refresh failed:', error);
         }
-    }, 5 * 60 * 1000); // 5 minutes
-
-    // Also refresh when the window regains focus
-    window.addEventListener('focus', async () => {
-        try {
-            await loadTenantsFromFirebase();
-            console.log('Data refreshed on window focus');
-        } catch (error) {
-            console.error('Data refresh failed on window focus:', error);
-        }
-    });
+    }, 15 * 60 * 1000); // 15 minutes
 }
 
 // Load tenants from Firestore
