@@ -46,8 +46,10 @@ self.addEventListener('activate', event => {
 
 // Fetch resources
 self.addEventListener('fetch', event => {
+    const requestUrl = new URL(event.request.url);
+    
     // Skip caching for Firebase URLs
-    if (NO_CACHE_URLS.some(url => event.request.url.includes(url))) {
+    if (NO_CACHE_URLS.some(url => requestUrl.hostname.includes(url))) {
         // For Firebase URLs, just pass through the request without caching
         event.respondWith(fetch(event.request));
         return;
