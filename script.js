@@ -1517,14 +1517,12 @@ function updateCombinedStats() {
     // Calculate stats for each plot
     PLOTS.forEach(plot => {
         const tenants = getTenants(plot);
-        console.log(`Plot ${plot}:`, { tenantsCount: tenants.length, tenants });
         
         combinedTenants += tenants.length;
         
         // Calculate total due for this plot using calculatePreviousDue
         const plotDue = tenants.reduce((sum, tenant) => {
             const totalDue = calculatePreviousDue(tenant);
-            console.log(`Tenant ${tenant.tenantName} total due:`, totalDue);
             return sum + totalDue;
         }, 0);
         combinedDue += plotDue;
@@ -1532,7 +1530,6 @@ function updateCombinedStats() {
         // Calculate monthly rent for this plot
         const plotMonthlyRent = tenants.reduce((sum, tenant) => {
             const rent = tenant.monthlyRent || 0;
-            console.log(`Tenant ${tenant.tenantName} monthly rent:`, rent);
             return sum + rent;
         }, 0);
         combinedMonthlyRent += plotMonthlyRent;
@@ -1540,7 +1537,6 @@ function updateCombinedStats() {
         // Calculate monthly bill for this plot
         const plotMonthlyBill = tenants.reduce((sum, tenant) => {
             const bill = calculateCurrentMonthBill(tenant);
-            console.log(`Tenant ${tenant.tenantName} monthly bill:`, bill);
             return sum + bill;
         }, 0);
         combinedMonthlyBill += plotMonthlyBill;
@@ -1552,18 +1548,9 @@ function updateCombinedStats() {
             const currentMonthPayments = tenantPayments
                 .filter(payment => payment.date.startsWith(currentMonth))
                 .reduce((paymentSum, payment) => paymentSum + (payment.amount || 0), 0);
-            console.log(`Tenant ${tenant.tenantName} current month payments:`, currentMonthPayments);
             return sum + currentMonthPayments;
         }, 0);
         combinedPayments += plotPayments;
-    });
-
-    console.log('Combined Stats:', {
-        combinedTenants,
-        combinedDue,
-        combinedMonthlyRent,
-        combinedMonthlyBill,
-        combinedPayments
     });
 
     // Update combined stats display
