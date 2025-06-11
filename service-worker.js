@@ -55,15 +55,27 @@ function isCacheable(request) {
     return true;
 }
 
+// Check if request is Firebase related
+function isFirebaseRequest(url) {
+    return url.hostname.includes('firestore.googleapis.com') ||
+           url.hostname.includes('firebase.googleapis.com') ||
+           url.hostname.includes('googleapis.com') ||
+           url.hostname.includes('firebasestorage.app');
+}
+
 // Fetch resources
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
     
-    // Skip service worker for Firebase URLs and unsupported schemes
-    if (requestUrl.hostname.includes('firestore.googleapis.com') ||
-        requestUrl.hostname.includes('firebase.googleapis.com') ||
-        requestUrl.hostname.includes('googleapis.com') ||
-        !isCacheable(event.request)) {
+    // Completely bypass service worker for Firebase requests
+    if (isFirebaseRequest(requestUrl)) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
+    // Skip caching for unsupported schemes
+    if (!isCacheable(event.request)) {
+        event.respondWith(fetch(event.request));
         return;
     }
 
