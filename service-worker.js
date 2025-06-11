@@ -6,8 +6,7 @@ const urlsToCache = [
     '/script.js',
     '/manifest.json',
     '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+    '/icons/icon-512x512.png'
 ];
 
 // Install service worker and cache assets
@@ -57,28 +56,19 @@ function isCacheable(request) {
 
 // Check if request should bypass service worker
 function shouldBypassServiceWorker(request) {
-    // Check for Firestore specific headers
-    if (request.headers.has('x-firestore-client')) {
+    const url = new URL(request.url);
+    
+    // Bypass Firestore listen channel
+    if (url.pathname.includes('/Listen/channel')) {
         return true;
     }
-
-    // Check for Firebase specific headers
-    if (request.headers.has('x-firebase-client')) {
-        return true;
-    }
-
-    // Check for Google API specific headers
-    if (request.headers.has('x-goog-api-client')) {
-        return true;
-    }
-
-    // Check for WebSocket upgrade requests
-    if (request.headers.get('upgrade') === 'websocket') {
-        return true;
-    }
-
-    // Check for streaming requests
-    if (request.headers.get('accept')?.includes('text/event-stream')) {
+    
+    // Existing checks...
+    if (request.headers.has('x-firestore-client') || 
+        request.headers.has('x-firebase-client') || 
+        request.headers.has('x-goog-api-client') ||
+        request.headers.get('upgrade') === 'websocket' ||
+        request.headers.get('accept')?.includes('text/event-stream')) {
         return true;
     }
 
@@ -88,6 +78,13 @@ function shouldBypassServiceWorker(request) {
 // Fetch resources
 self.addEventListener('fetch', event => {
     const request = event.request;
+    const url = new URL(request.url);
+
+    // Network-first approach for Firestore requests
+    if (url.hostname === 'firestore.googleapis.com') {
+        event.respondWith(fetch(request));
+        return;
+    }
     
     // Bypass service worker for specific requests
     if (shouldBypassServiceWorker(request)) {
@@ -120,7 +117,10 @@ self.addEventListener('fetch', event => {
                     return response;
                 }
 
-                return fetch(request)
+                return fetch(request, {
+                    mode: 'cors',
+                    credentials: 'omit'
+                })
                     .then(response => {
                         if (!response || response.status !== 200) {
                             return response;
@@ -132,12 +132,16 @@ self.addEventListener('fetch', event => {
                             caches.open(CACHE_NAME)
                                 .then(cache => {
                                     cache.put(request, responseToCache);
+                                })
+                                .catch(error => {
+                                    console.error('Cache put failed:', error);
                                 });
                         }
 
                         return response;
                     })
-                    .catch(() => {
+                    .catch(error => {
+                        console.error('Fetch failed:', error);
                         // If fetch fails, try to serve from cache
                         return caches.match(request);
                     });
