@@ -64,12 +64,9 @@ function showUpdateNotification() {
 }
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initializeNavigation();
     initializePlotTabs();
-    loadTenants();
-    setupEventListeners();
-    updateDashboardStats();
     initializeTheme();
     addThemeToggle();
     addTenantStatusFilter();
@@ -81,26 +78,37 @@ document.addEventListener('DOMContentLoaded', () => {
         tenantsTab.click();
     }
 
-    // Check Firebase connection in the background
-    checkFirebaseConnection().then(isConnected => {
+    // Check Firebase connection first
+    try {
+        const isConnected = await checkFirebaseConnection();
         if (isConnected) {
             console.log('Firebase is connected');
-            checkFirebaseRules().then(hasPermissions => {
-                if (hasPermissions) {
-                    console.log('Firebase is ready to sync data');
-                    // Load data from Firebase in the background
-                    loadTenantsFromFirebase();
-                    
-                    // Set up periodic data refresh
-                    setupPeriodicRefresh();
-                } else {
-                    console.error('Firebase permissions not properly configured');
-                }
-            });
+            const hasPermissions = await checkFirebaseRules();
+            if (hasPermissions) {
+                console.log('Firebase is ready to sync data');
+                // Load data from Firebase first
+                await loadTenantsFromFirebase();
+                // Set up periodic data refresh
+                setupPeriodicRefresh();
+            } else {
+                console.error('Firebase permissions not properly configured');
+                // Fall back to localStorage
+                loadTenants();
+            }
         } else {
-            console.error('Firebase connection failed. Data will be stored locally only.');
+            console.error('Firebase connection failed. Loading from localStorage.');
+            // Fall back to localStorage
+            loadTenants();
         }
-    });
+    } catch (error) {
+        console.error('Error during initialization:', error);
+        // Fall back to localStorage
+        loadTenants();
+    }
+
+    // Set up event listeners after data is loaded
+    setupEventListeners();
+    updateDashboardStats();
 });
 
 // Set up periodic data refresh
@@ -126,7 +134,7 @@ function setupPeriodicRefresh() {
     });
 }
 
-// Load tenants from Firestore in the background
+// Load tenants from Firestore
 async function loadTenantsFromFirebase() {
     const currentPlot = getCurrentPlot();
     try {
@@ -139,15 +147,24 @@ async function loadTenantsFromFirebase() {
             tenants.push(doc.data());
         });
         
-        if (tenants.length > 0) {
-            const plotKey = getPlotStorageKey(currentPlot);
-            localStorage.setItem(plotKey, JSON.stringify(tenants));
-            displayTenants(tenants);
-            updateTenantSelect(tenants);
-            updateDashboardStats();
-        }
+        // Always update localStorage with Firebase data
+        const plotKey = getPlotStorageKey(currentPlot);
+        localStorage.setItem(plotKey, JSON.stringify(tenants));
+        
+        // Apply search filter if exists
+        const filteredTenants = currentSearchTerm ? tenants.filter(tenant => 
+            tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
+            tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
+        ) : tenants;
+        
+        displayTenants(filteredTenants);
+        updateTenantSelect(tenants);
+        updateDashboardStats();
+        
+        return tenants;
     } catch (error) {
         console.error('Error loading from Firestore:', error);
+        throw error; // Propagate error for proper fallback
     }
 }
 
