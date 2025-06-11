@@ -6,7 +6,8 @@ const urlsToCache = [
     '/script.js',
     '/manifest.json',
     '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png'
+    '/icons/icon-512x512.png',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
 // URLs that should not be cached
@@ -61,10 +62,13 @@ self.addEventListener('fetch', event => {
                 // Clone the request
                 const fetchRequest = event.request.clone();
 
-                return fetch(fetchRequest).then(
+                return fetch(fetchRequest, {
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                }).then(
                     response => {
                         // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
+                        if (!response || response.status !== 200) {
                             return response;
                         }
 
@@ -78,7 +82,15 @@ self.addEventListener('fetch', event => {
 
                         return response;
                     }
-                );
+                ).catch(error => {
+                    console.error('Fetch failed:', error);
+                    return new Response('Network error happened', {
+                        status: 408,
+                        headers: new Headers({
+                            'Content-Type': 'text/plain'
+                        })
+                    });
+                });
             })
     );
 });
