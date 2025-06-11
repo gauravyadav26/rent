@@ -1658,6 +1658,35 @@ td {
     font-size: 1.1rem;
 }
 
+/* Sync Status */
+.sync-status {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sync-status.success {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.sync-status.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.sync-status.syncing {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.sync-status i {
+    font-size: 1.1rem;
+}
+
 /* Dark theme adjustments */
 [data-theme="dark"] .action-btn {
     background-color: var(--primary-color-dark);
@@ -1665,6 +1694,21 @@ td {
 
 [data-theme="dark"] .action-btn:hover {
     background-color: var(--primary-color);
+}
+
+[data-theme="dark"] .sync-status.success {
+    background-color: #064e3b;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .sync-status.error {
+    background-color: #7f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .sync-status.syncing {
+    background-color: #1e3a8a;
+    color: #bfdbfe;
 }
 
 /* Section Header */

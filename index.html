@@ -245,6 +245,9 @@
                 <section id="data-management" class="section">
                     <h2><i class="fas fa-database"></i> Data Management</h2>
                     <div class="data-management-buttons">
+                        <button id="sync-data" class="action-btn">
+                            <i class="fas fa-sync"></i> Sync Data
+                        </button>
                         <button id="export-data" class="action-btn">
                             <i class="fas fa-download"></i> Export Data
                         </button>
@@ -252,6 +255,9 @@
                             <i class="fas fa-upload"></i> Import Data
                             <input type="file" id="import-data" accept=".json" style="display: none;">
                         </label>
+                    </div>
+                    <div id="sync-status" class="sync-status" style="display: none;">
+                        <span class="sync-message"></span>
                     </div>
                 </section>
             </div>

@@ -183,6 +183,10 @@ function setupEventListeners() {
     const exportDataBtn = document.getElementById('export-data');
     exportDataBtn.addEventListener('click', handleDataExport);
 
+    // Sync data
+    const syncDataBtn = document.getElementById('sync-data');
+    syncDataBtn.addEventListener('click', handleDataSync);
+
     // Add event listener for window unload to ensure data is saved
     window.addEventListener('beforeunload', () => {
         saveAllData();
@@ -1445,9 +1449,9 @@ function updateCombinedStats() {
         
         combinedTenants += tenants.length;
         
-        // Calculate total due for this plot
+        // Calculate total due for this plot using calculatePreviousDue
         const plotDue = tenants.reduce((sum, tenant) => {
-            const totalDue = calculateTotalAmountDue(tenant);
+            const totalDue = calculatePreviousDue(tenant);
             console.log(`Tenant ${tenant.tenantName} total due:`, totalDue);
             return sum + totalDue;
         }, 0);
@@ -1470,7 +1474,7 @@ function updateCombinedStats() {
         combinedMonthlyBill += plotMonthlyBill;
 
         // Calculate current month payments for this plot
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+        const currentMonth = new Date().toISOString().slice(0, 7);
         const plotPayments = tenants.reduce((sum, tenant) => {
             const tenantPayments = tenant.paymentHistory || [];
             const currentMonthPayments = tenantPayments
@@ -1496,4 +1500,54 @@ function updateCombinedStats() {
     document.getElementById('combined-total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyRent))}`;
     document.getElementById('combined-total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyBill))}`;
     document.getElementById('combined-current-month-payments').textContent = `₹${formatIndianNumber(Math.round(combinedPayments))}`;
+}
+
+// Sync data with Firebase
+async function handleDataSync() {
+    const syncStatus = document.getElementById('sync-status');
+    const syncMessage = syncStatus.querySelector('.sync-message');
+    const syncBtn = document.getElementById('sync-data');
+    
+    try {
+        // Show syncing status
+        syncStatus.style.display = 'flex';
+        syncStatus.className = 'sync-status syncing';
+        syncMessage.innerHTML = '<i class="fas fa-sync fa-spin"></i> Syncing data...';
+        syncBtn.disabled = true;
+
+        // Get current plot
+        const currentPlot = getCurrentPlot();
+        const plotKey = getPlotStorageKey(currentPlot);
+        const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+
+        // Sync each tenant to Firebase
+        for (const tenant of tenants) {
+            await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
+        }
+
+        // Load latest data from Firebase
+        await loadTenantsFromFirebase();
+
+        // Show success status
+        syncStatus.className = 'sync-status success';
+        syncMessage.innerHTML = '<i class="fas fa-check-circle"></i> Data synced successfully!';
+        
+        // Hide status after 3 seconds
+        setTimeout(() => {
+            syncStatus.style.display = 'none';
+        }, 3000);
+    } catch (error) {
+        console.error('Sync error:', error);
+        
+        // Show error status
+        syncStatus.className = 'sync-status error';
+        syncMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Sync failed: ${error.message}`;
+        
+        // Hide status after 5 seconds
+        setTimeout(() => {
+            syncStatus.style.display = 'none';
+        }, 5000);
+    } finally {
+        syncBtn.disabled = false;
+    }
 }
