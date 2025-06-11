@@ -406,9 +406,24 @@ function updateDashboardStats() {
     }, 0);
     
     document.getElementById('total-rent').textContent = `₹${formatIndianNumber(Math.round(totalDue))}`;
-
+    
     // Add current month payments calculation
     calculateCurrentMonthPayments();
+
+    // Calculate total monthly rent
+    const totalMonthlyRent = tenants.reduce((sum, tenant) => {
+        return sum + (tenant.monthlyRent || 0);
+    }, 0);
+    document.getElementById('total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyRent))}`;
+
+    // Calculate total monthly bill
+    const totalMonthlyBill = tenants.reduce((sum, tenant) => {
+        return sum + calculateCurrentMonthBill(tenant);
+    }, 0);
+    document.getElementById('total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyBill))}`;
+
+    // Update combined stats
+    updateCombinedStats();
 }
 
 // Format date to dd/mm/yy
@@ -517,13 +532,9 @@ function handleSearch(e) {
 function calculatePreviousDue(tenant) {
     const totalMonths = calculateMonthsDifference(tenant.startDate);
     const totalRentDue = totalMonths * tenant.monthlyRent;
-    console.log(totalRentDue);
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
-    console.log(totalElectricityDue);
     const totalPaymentsMade = calculateTotalPayments(tenant);
-    console.log(totalPaymentsMade);
     const startingDue = tenant.startingDue || 0;
-    console.log(startingDue);
     return totalRentDue + totalElectricityDue - totalPaymentsMade  + startingDue;
     
 }
@@ -1408,4 +1419,75 @@ function initializeSidebar() {
             icon.classList.add('fa-bars');
         }
     });
+}
+
+function updateCombinedStats() {
+    let combinedTenants = 0;
+    let combinedDue = 0;
+    let combinedPayments = 0;
+    let combinedMonthlyRent = 0;
+    let combinedMonthlyBill = 0;
+
+    console.log('PLOTS:', PLOTS); // Debug: Check available plots
+
+    // Calculate stats for each plot
+    PLOTS.forEach(plot => {
+        const plotKey = getPlotStorageKey(plot);
+        const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+        
+        console.log(`Plot ${plot}:`, { plotKey, tenantsCount: tenants.length }); // Debug: Check data for each plot
+        
+        combinedTenants += tenants.length;
+        
+        // Calculate total due for this plot
+        const plotDue = tenants.reduce((sum, tenant) => {
+            const totalDue = calculateTotalAmountDue(tenant);
+            console.log(`Tenant ${tenant.tenantName} total due:`, totalDue); // Debug: Check individual tenant due
+            return sum + totalDue;
+        }, 0);
+        combinedDue += plotDue;
+
+        // Calculate monthly rent for this plot
+        const plotMonthlyRent = tenants.reduce((sum, tenant) => {
+            const rent = tenant.monthlyRent || 0;
+            console.log(`Tenant ${tenant.tenantName} monthly rent:`, rent); // Debug: Check individual tenant rent
+            return sum + rent;
+        }, 0);
+        combinedMonthlyRent += plotMonthlyRent;
+
+        // Calculate monthly bill for this plot
+        const plotMonthlyBill = tenants.reduce((sum, tenant) => {
+            const bill = calculateCurrentMonthBill(tenant);
+            console.log(`Tenant ${tenant.tenantName} monthly bill:`, bill); // Debug: Check individual tenant bill
+            return sum + bill;
+        }, 0);
+        combinedMonthlyBill += plotMonthlyBill;
+
+        // Calculate current month payments for this plot
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+        const plotPayments = tenants.reduce((sum, tenant) => {
+            const tenantPayments = tenant.paymentHistory || [];
+            const currentMonthPayments = tenantPayments
+                .filter(payment => payment.date.startsWith(currentMonth))
+                .reduce((paymentSum, payment) => paymentSum + (payment.amount || 0), 0);
+            console.log(`Tenant ${tenant.tenantName} current month payments:`, currentMonthPayments); // Debug: Check individual tenant payments
+            return sum + currentMonthPayments;
+        }, 0);
+        combinedPayments += plotPayments;
+    });
+
+    console.log('Combined Stats:', { // Debug: Check final combined values
+        combinedTenants,
+        combinedDue,
+        combinedMonthlyRent,
+        combinedMonthlyBill,
+        combinedPayments
+    });
+
+    // Update combined stats display
+    document.getElementById('combined-total-tenants').textContent = formatIndianNumber(combinedTenants);
+    document.getElementById('combined-total-rent').textContent = `₹${formatIndianNumber(Math.round(combinedDue))}`;
+    document.getElementById('combined-total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyRent))}`;
+    document.getElementById('combined-total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyBill))}`;
+    document.getElementById('combined-current-month-payments').textContent = `₹${formatIndianNumber(Math.round(combinedPayments))}`;
 }

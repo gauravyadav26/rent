@@ -1858,7 +1858,7 @@ input:focus, select:focus, textarea:focus {
 /* Add Summary section styles */
 .summary-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
     gap: 1.5rem;
     margin-top: 1.5rem;
 }
@@ -1877,7 +1877,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .summary-stats .stat-card i {
-    font-size: 2rem;
+    font-size: 1rem;
     color: var(--primary-color);
     margin-bottom: 0.5rem;
 }
@@ -1944,4 +1944,40 @@ input:focus, select:focus, textarea:focus {
 [data-theme="dark"] .payment-summary .summary-card {
     background: var(--card-background-dark);
     box-shadow: var(--shadow-md);
+}
+
+.combined-stats-title {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border-color);
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.combined-stats {
+    margin-top: 1rem;
+}
+
+.combined-stats .stat-card {
+    background-color: var(--card-background);
+    border: 2px solid var(--primary-color);
+}
+
+.combined-stats .stat-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-hover);
+}
+
+.combined-stats .stat-card i {
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.combined-stats .stat-card:hover i {
+    transform: scale(1.1) rotate(5deg);
+    background: rgba(59, 130, 246, 0.15);
 } 
