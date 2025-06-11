@@ -38,10 +38,18 @@ if ('serviceWorker' in navigator) {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // New version available
-                        showUpdateNotification();
+                        // Only show update notification if there's a new version
+                        if (registration.active && registration.active !== newWorker) {
+                            showUpdateNotification();
+                        }
                     }
                 });
+            });
+
+            // Handle controller change
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                // Reload the page when the new service worker takes control
+                window.location.reload();
             });
         } catch (error) {
             console.error('ServiceWorker registration failed:', error);
@@ -51,6 +59,12 @@ if ('serviceWorker' in navigator) {
 
 // Show update notification
 function showUpdateNotification() {
+    // Remove any existing notification
+    const existingNotification = document.querySelector('.update-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
     const notification = document.createElement('div');
     notification.className = 'update-notification';
     notification.innerHTML = `

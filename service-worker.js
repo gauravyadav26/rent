@@ -19,6 +19,9 @@ const NO_SW_URLS = [
 
 // Install service worker and cache assets
 self.addEventListener('install', event => {
+    // Skip waiting to activate the new service worker immediately
+    self.skipWaiting();
+    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -30,17 +33,23 @@ self.addEventListener('install', event => {
 
 // Activate and clean up old caches
 self.addEventListener('activate', event => {
+    // Claim clients to ensure the new service worker takes control immediately
     event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
+        Promise.all([
+            // Claim all clients
+            clients.claim(),
+            // Clean up old caches
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cacheName => {
+                        if (cacheName !== CACHE_NAME) {
+                            console.log('Deleting old cache:', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
+                );
+            })
+        ])
     );
 });
 
@@ -50,6 +59,17 @@ self.addEventListener('fetch', event => {
     
     // Skip service worker completely for Firebase URLs
     if (NO_SW_URLS.some(url => requestUrl.hostname.includes(url))) {
+        return;
+    }
+
+    // Handle navigation requests
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request)
+                .catch(() => {
+                    return caches.match('/index.html');
+                })
+        );
         return;
     }
 
