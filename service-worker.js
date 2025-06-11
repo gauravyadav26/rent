@@ -10,18 +10,8 @@ const urlsToCache = [
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 
-// URLs that should not be handled by service worker
-const NO_SW_URLS = [
-    'firestore.googleapis.com',
-    'firebase.googleapis.com',
-    'googleapis.com'
-];
-
 // Install service worker and cache assets
 self.addEventListener('install', event => {
-    // Skip waiting to activate the new service worker immediately
-    self.skipWaiting();
-    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -33,10 +23,9 @@ self.addEventListener('install', event => {
 
 // Activate and clean up old caches
 self.addEventListener('activate', event => {
-    // Claim clients to ensure the new service worker takes control immediately
     event.waitUntil(
         Promise.all([
-            // Claim all clients
+            // Take control of all clients
             clients.claim(),
             // Clean up old caches
             caches.keys().then(cacheNames => {
@@ -57,8 +46,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const requestUrl = new URL(event.request.url);
     
-    // Skip service worker completely for Firebase URLs
-    if (NO_SW_URLS.some(url => requestUrl.hostname.includes(url))) {
+    // Skip service worker for Firebase URLs
+    if (requestUrl.hostname.includes('firestore.googleapis.com') ||
+        requestUrl.hostname.includes('firebase.googleapis.com') ||
+        requestUrl.hostname.includes('googleapis.com')) {
         return;
     }
 
@@ -73,46 +64,32 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // For all other requests
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Cache hit - return response
                 if (response) {
                     return response;
                 }
 
-                // Clone the request
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest, {
-                    mode: 'cors',
-                    credentials: 'same-origin'
-                }).then(
-                    response => {
-                        // Check if we received a valid response
+                return fetch(event.request)
+                    .then(response => {
                         if (!response || response.status !== 200) {
                             return response;
                         }
 
-                        // Clone the response
                         const responseToCache = response.clone();
-
                         caches.open(CACHE_NAME)
                             .then(cache => {
                                 cache.put(event.request, responseToCache);
                             });
 
                         return response;
-                    }
-                ).catch(error => {
-                    console.error('Fetch failed:', error);
-                    return new Response('Network error happened', {
-                        status: 408,
-                        headers: new Headers({
-                            'Content-Type': 'text/plain'
-                        })
+                    })
+                    .catch(() => {
+                        // If fetch fails, try to serve from cache
+                        return caches.match(event.request);
                     });
-                });
             })
     );
 });

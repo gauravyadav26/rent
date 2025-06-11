@@ -21,7 +21,9 @@ let currentSearchTerm = '';
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
-            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            const registration = await navigator.serviceWorker.register('/service-worker.js', {
+                updateViaCache: 'none'
+            });
             console.log('ServiceWorker registration successful');
 
             // Check for updates every hour
@@ -37,19 +39,25 @@ if ('serviceWorker' in navigator) {
             registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // Only show update notification if there's a new version
-                        if (registration.active && registration.active !== newWorker) {
+                    if (newWorker.state === 'installed') {
+                        if (navigator.serviceWorker.controller) {
+                            // New version available
                             showUpdateNotification();
+                        } else {
+                            // First time installation
+                            console.log('Service Worker installed for the first time');
                         }
                     }
                 });
             });
 
             // Handle controller change
+            let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-                // Reload the page when the new service worker takes control
-                window.location.reload();
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
             });
         } catch (error) {
             console.error('ServiceWorker registration failed:', error);
@@ -75,6 +83,11 @@ function showUpdateNotification() {
         </div>
     `;
     document.body.appendChild(notification);
+
+    // Auto-hide notification after 10 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 10000);
 }
 
 // Initialize the application
