@@ -340,6 +340,7 @@ function createTenantCard(tenant) {
         <div class="tenant-card ${isActive ? 'active-tenant' : 'past-tenant'}">
             <h3>
                 <i class="fas fa-user"></i> ${tenant.tenantName}
+                <span class="room-number">Room ${tenant.roomNumber}</span>
                 <span class="tenant-status ${isActive ? 'active' : 'past'}">
                     ${isActive ? 'Active' : 'Past'}
                 </span>
@@ -347,7 +348,6 @@ function createTenantCard(tenant) {
             <div class="tenant-info">
                 <div class="info-section" data-section="basic-info">
                     <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
-                    <p><strong>Room:</strong> ${tenant.roomNumber}</p>
                     <p><strong>Start Date:</strong> ${formatDate(tenant.startDate)}</p>
                     ${tenant.endDate ? `<p><strong>End Date:</strong> ${formatDate(tenant.endDate)}</p>` : ''}
                     <p><strong>Months Since Start:</strong> ${monthsSinceStart}</p>
