@@ -2082,11 +2082,46 @@ input:focus, select:focus, textarea:focus {
     background-color: var(--primary-color-dark);
 }
 
-[data-theme="dark"] .update-content button {
-    background-color: #1f2937;
-    color: #f3f4f6;
-}
-
 [data-theme="dark"] .update-content button:hover {
     background-color: #374151;
+}
+
+/* PWA Install Button */
+#install-pwa {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-md);
+}
+
+#install-pwa:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+#install-pwa:active {
+    transform: translateY(0);
+}
+
+#install-pwa i {
+    font-size: 1.1rem;
+}
+
+/* Dark theme adjustments for install button */
+[data-theme="dark"] #install-pwa {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+[data-theme="dark"] #install-pwa:hover {
+    background-color: var(--primary-hover);
 } 
