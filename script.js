@@ -14,43 +14,6 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
-// Enable offline persistence
-db.enablePersistence()
-    .catch((err) => {
-        if (err.code === 'failed-precondition') {
-            console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code === 'unimplemented') {
-            console.warn('The current browser does not support persistence.');
-        }
-    });
-
-// Cache management
-const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-const dataCache = new Map();
-
-function getCacheKey(plot) {
-    return `tenants_${plot}_${Math.floor(Date.now() / CACHE_DURATION)}`;
-}
-
-function isCacheValid(key) {
-    return dataCache.has(key);
-}
-
-function setCache(key, data) {
-    dataCache.set(key, {
-        data,
-        timestamp: Date.now()
-    });
-}
-
-function getCache(key) {
-    const cached = dataCache.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        return cached.data;
-    }
-    return null;
-}
-
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
 
@@ -71,66 +34,68 @@ window.addEventListener('appinstalled', () => {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize core functionality first
-    setupLazyLoading();
-    setupEventListeners();
-    
-    // Lazy load non-critical modules
-    const loadModules = async () => {
-        try {
-            await Promise.all([
-                initializeDashboard(),
-                initializeTenantManagement(),
-                initializeFileHandling()
-            ]);
-        } catch (error) {
-            console.error('Error loading modules:', error);
-        }
-    };
-    
-    // Load modules after a short delay to prioritize critical rendering
-    setTimeout(loadModules, 100);
+    initializeNavigation();
+    initializePlotTabs();
+    initializeTheme();
+    addThemeToggle();
+    addTenantStatusFilter();
+    initializeSidebar();
 
-    // Initialize virtualized list
-    optimizeTenantList();
-    
-    // Optimize window resize handling
-    window.addEventListener('resize', debounce(() => {
-        optimizeTenantList();
-    }, 250));
+    // Set tenants tab as active by default
+    const tenantsTab = document.querySelector('.nav-btn[data-section="tenants"]');
+    if (tenantsTab) {
+        tenantsTab.click();
+    }
+
+    // Check Firebase connection first
+    try {
+        const isConnected = await checkFirebaseConnection();
+        if (isConnected) {
+            console.log('Firebase is connected');
+            const hasPermissions = await checkFirebaseRules();
+            if (hasPermissions) {
+                console.log('Firebase is ready to sync data');
+                // Load data from Firebase first
+                await loadTenantsFromFirebase();
+                // Set up periodic data refresh
+                setupPeriodicRefresh();
+            } else {
+                console.error('Firebase permissions not properly configured');
+                // Fall back to localStorage
+                loadTenants();
+            }
+        } else {
+            console.error('Firebase connection failed. Loading from localStorage.');
+            // Fall back to localStorage
+            loadTenants();
+        }
+    } catch (error) {
+        console.error('Error during initialization:', error);
+        // Fall back to localStorage
+        loadTenants();
+    }
+
+    // Set up event listeners after data is loaded
+    setupEventListeners();
+    updateDashboardStats();
 });
 
 // Set up periodic data refresh
 function setupPeriodicRefresh() {
-    // Clear any existing intervals
-    if (window.refreshInterval) {
-        clearInterval(window.refreshInterval);
-    }
-    
-    // Set up new interval
-    window.refreshInterval = setInterval(async () => {
+    // Refresh data every 15 minutes
+    setInterval(async () => {
         try {
             await loadTenantsFromFirebase();
+            console.log('Data refreshed successfully');
         } catch (error) {
             console.error('Data refresh failed:', error);
         }
-    }, CACHE_DURATION);
+    }, 15 * 60 * 1000); // 15 minutes
 }
 
 // Load tenants from Firestore
 async function loadTenantsFromFirebase() {
     const currentPlot = getCurrentPlot();
-    const cacheKey = getCacheKey(currentPlot);
-    
-    // Try to get from cache first
-    const cachedData = getCache(cacheKey);
-    if (cachedData) {
-        displayTenants(cachedData);
-        updateTenantSelect(cachedData);
-        updateDashboardStats();
-        return cachedData;
-    }
-
     try {
         const snapshot = await db.collection('tenants')
             .where('plotName', '==', currentPlot)
@@ -141,10 +106,7 @@ async function loadTenantsFromFirebase() {
             tenants.push(doc.data());
         });
         
-        // Update cache
-        setCache(cacheKey, tenants);
-        
-        // Update localStorage as backup
+        // Always update localStorage with Firebase data
         const plotKey = getPlotStorageKey(currentPlot);
         localStorage.setItem(plotKey, JSON.stringify(tenants));
         
@@ -161,12 +123,7 @@ async function loadTenantsFromFirebase() {
         return tenants;
     } catch (error) {
         console.error('Error loading from Firestore:', error);
-        // Fall back to localStorage
-        const plotKey = getPlotStorageKey(currentPlot);
-        const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-        displayTenants(tenants);
-        updateTenantSelect(tenants);
-        return tenants;
+        throw error; // Propagate error for proper fallback
     }
 }
 
@@ -183,6 +140,7 @@ function loadTenants() {
     ) : tenants;
     
     displayTenants(filteredTenants);
+    updateTenantSelect(tenants);
 }
 
 // Initialize navigation
@@ -368,19 +326,12 @@ async function saveTenant(tenant) {
         tenants.push(tenant);
     }
     
-    // Update localStorage
     localStorage.setItem(plotKey, JSON.stringify(tenants));
     
-    // Update cache
-    const cacheKey = getCacheKey(tenant.plotName);
-    setCache(cacheKey, tenants);
-    
     try {
-        // Save to Firebase
         await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
     } catch (error) {
         console.error('Firebase save failed:', error);
-        throw error;
     }
 }
 
@@ -1190,6 +1141,12 @@ function addThemeToggle() {
     document.body.appendChild(themeToggle);
 }
 
+// Initialize theme and toggle when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    addThemeToggle();
+    initializeTheme();
+});
+
 // Listen for system theme changes
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
     if (!localStorage.getItem('theme')) {
@@ -1628,243 +1585,4 @@ async function handleDataSync() {
     } finally {
         syncBtn.disabled = false;
     }
-}
-
-// Image optimization and lazy loading
-function setupLazyLoading() {
-    // Create Intersection Observer for lazy loading
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                const src = img.getAttribute('data-src');
-                if (src) {
-                    img.src = src;
-                    img.removeAttribute('data-src');
-                    observer.unobserve(img);
-                }
-            }
-        });
-    }, {
-        rootMargin: '50px 0px',
-        threshold: 0.01
-    });
-
-    // Observe all images with data-src attribute
-    document.querySelectorAll('img[data-src]').forEach(img => {
-        imageObserver.observe(img);
-    });
-}
-
-// Optimize image before upload
-async function optimizeImage(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Calculate new dimensions while maintaining aspect ratio
-                let width = img.width;
-                let height = img.height;
-                const maxDimension = 800; // Maximum dimension for uploaded images
-                
-                if (width > height && width > maxDimension) {
-                    height = (height * maxDimension) / width;
-                    width = maxDimension;
-                } else if (height > maxDimension) {
-                    width = (width * maxDimension) / height;
-                    height = maxDimension;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                
-                // Draw and compress image
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                // Convert to blob with quality 0.8
-                canvas.toBlob((blob) => {
-                    resolve(new File([blob], file.name, {
-                        type: 'image/jpeg',
-                        lastModified: Date.now()
-                    }));
-                }, 'image/jpeg', 0.8);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-// Update the file input handler to use image optimization
-document.getElementById('fileInput').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        try {
-            const optimizedFile = await optimizeImage(file);
-            // Use the optimized file for upload
-            uploadFile(optimizedFile);
-        } catch (error) {
-            console.error('Error optimizing image:', error);
-            // Fallback to original file if optimization fails
-            uploadFile(file);
-        }
-    } else {
-        uploadFile(file);
-    }
-});
-
-// Code splitting and lazy loading
-const loadModule = async (modulePath) => {
-    try {
-        const module = await import(modulePath);
-        return module;
-    } catch (error) {
-        console.error(`Error loading module ${modulePath}:`, error);
-        throw error;
-    }
-};
-
-// Lazy load dashboard components
-async function initializeDashboard() {
-    try {
-        const dashboardModule = await loadModule('./modules/dashboard.js');
-        dashboardModule.initialize();
-    } catch (error) {
-        console.error('Failed to load dashboard module:', error);
-    }
-}
-
-// Lazy load tenant management
-async function initializeTenantManagement() {
-    try {
-        const tenantModule = await loadModule('./modules/tenant.js');
-        tenantModule.initialize();
-    } catch (error) {
-        console.error('Failed to load tenant module:', error);
-    }
-}
-
-// Lazy load file handling
-async function initializeFileHandling() {
-    try {
-        const fileModule = await loadModule('./modules/file.js');
-        fileModule.initialize();
-    } catch (error) {
-        console.error('Failed to load file module:', error);
-    }
-}
-
-// UI Performance Optimizations
-const debounce = (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-};
-
-// Virtualized list rendering
-class VirtualizedList {
-    constructor(container, itemHeight, totalItems, renderItem) {
-        this.container = container;
-        this.itemHeight = itemHeight;
-        this.totalItems = totalItems;
-        this.renderItem = renderItem;
-        this.visibleItems = Math.ceil(container.clientHeight / itemHeight);
-        this.scrollTop = 0;
-        this.setupVirtualization();
-    }
-
-    setupVirtualization() {
-        this.container.style.position = 'relative';
-        this.container.style.overflow = 'auto';
-        this.container.style.height = `${this.totalItems * this.itemHeight}px`;
-        
-        this.container.addEventListener('scroll', debounce(() => {
-            this.scrollTop = this.container.scrollTop;
-            this.render();
-        }, 16)); // ~60fps
-        
-        this.render();
-    }
-
-    render() {
-        const startIndex = Math.floor(this.scrollTop / this.itemHeight);
-        const endIndex = Math.min(startIndex + this.visibleItems + 1, this.totalItems);
-        
-        // Clear existing content
-        this.container.innerHTML = '';
-        
-        // Create fragment for better performance
-        const fragment = document.createDocumentFragment();
-        
-        for (let i = startIndex; i < endIndex; i++) {
-            const item = this.renderItem(i);
-            item.style.position = 'absolute';
-            item.style.top = `${i * this.itemHeight}px`;
-            item.style.width = '100%';
-            fragment.appendChild(item);
-        }
-        
-        this.container.appendChild(fragment);
-    }
-}
-
-// Optimize tenant list rendering
-function optimizeTenantList() {
-    const tenantList = document.getElementById('tenantList');
-    if (!tenantList) return;
-
-    const ITEM_HEIGHT = 100; // Approximate height of each tenant card
-    
-    function renderTenantItem(index) {
-        const tenant = getTenants(getCurrentPlot())[index];
-        if (!tenant) return document.createElement('div');
-        
-        const div = document.createElement('div');
-        div.className = 'tenant-card';
-        div.innerHTML = `
-            <h3>${tenant.tenantName}</h3>
-            <p>Room: ${tenant.roomNumber}</p>
-            <p>Status: ${tenant.status}</p>
-        `;
-        return div;
-    }
-
-    new VirtualizedList(
-        tenantList,
-        ITEM_HEIGHT,
-        getTenants(getCurrentPlot()).length,
-        renderTenantItem
-    );
-}
-
-// Optimize search input
-const searchInput = document.getElementById('searchInput');
-if (searchInput) {
-    searchInput.addEventListener('input', debounce((e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        filterTenants(searchTerm);
-    }, 300));
-}
-
-// Optimize DOM updates
-function updateDashboardStats() {
-    const stats = calculateDashboardStats();
-    const fragment = document.createDocumentFragment();
-    
-    Object.entries(stats).forEach(([key, value]) => {
-        const element = document.getElementById(`${key}Count`);
-        if (element) {
-            element.textContent = value;
-        }
-    });
 }
