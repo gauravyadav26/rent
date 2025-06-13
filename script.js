@@ -1791,25 +1791,43 @@ const searchIndex = {
     index: new Map(),
     
     buildIndex(tenants) {
+        if (!Array.isArray(tenants)) {
+            console.warn('Invalid tenants data provided to buildIndex');
+            return;
+        }
+
         this.index.clear();
         tenants.forEach(tenant => {
-            // Index by name
-            const nameKey = tenant.name.toLowerCase();
-            this.index.set(nameKey, tenant.id);
-            
-            // Index by room number
-            if (tenant.roomNumber) {
-                this.index.set(tenant.roomNumber.toString(), tenant.id);
+            if (!tenant || !tenant.id) {
+                console.warn('Invalid tenant data found:', tenant);
+                return;
+            }
+
+            // Index by name (if exists)
+            if (tenant.name && typeof tenant.name === 'string') {
+                const nameKey = tenant.name.toLowerCase();
+                this.index.set(nameKey, tenant.id);
             }
             
-            // Index by phone
+            // Index by room number (if exists)
+            if (tenant.roomNumber) {
+                const roomKey = String(tenant.roomNumber);
+                this.index.set(roomKey, tenant.id);
+            }
+            
+            // Index by phone (if exists)
             if (tenant.phone) {
-                this.index.set(tenant.phone, tenant.id);
+                const phoneKey = String(tenant.phone);
+                this.index.set(phoneKey, tenant.id);
             }
         });
     },
     
     search(query) {
+        if (!query || typeof query !== 'string') {
+            return [];
+        }
+
         query = query.toLowerCase();
         const results = new Set();
         
