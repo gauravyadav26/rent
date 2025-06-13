@@ -40,19 +40,48 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Listen for the beforeinstallprompt event
+// Add PWA install prompt
+let deferredPrompt;
+const installButton = document.createElement('button');
+installButton.className = 'install-pwa-btn';
+installButton.innerHTML = '<i class="fas fa-download"></i> Install App';
+installButton.style.display = 'none';
+
+// Add the button to the DOM
+document.body.appendChild(installButton);
+
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Show the install prompt immediately
-    e.prompt();
+    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    e.preventDefault();
+    // Stash the event so it can be triggered later
+    deferredPrompt = e;
+    // Show the install button
+    installButton.style.display = 'block';
+});
+
+installButton.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    
+    // Show the install prompt
+    deferredPrompt.prompt();
     
     // Wait for the user to respond to the prompt
-    e.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the install prompt');
-        } else {
-            console.log('User dismissed the install prompt');
-        }
-    });
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    
+    // We no longer need the prompt. Clear it up
+    deferredPrompt = null;
+    
+    // Hide the install button
+    installButton.style.display = 'none';
+});
+
+// Listen for successful installation
+window.addEventListener('appinstalled', (evt) => {
+    // Log install to analytics
+    console.log('Application was installed');
+    // Hide the install button
+    installButton.style.display = 'none';
 });
 
 // Initialize the application
@@ -787,4 +816,825 @@ function loadPaymentHistory() {
     // Always show monthly summary since we're showing current month by default
     const monthlySummary = document.getElementById('monthly-summary');
     monthlySummary.style.display = 'block';
-    document.getElementById('monthly-payments').textContent = `
+    document.getElementById('monthly-payments').textContent = `₹${formatIndianNumber(Math.round(monthlyAmount))}`;
+
+    if (allPayments.length === 0) {
+        paymentHistoryList.innerHTML = '<p class="no-tenants">No payment history found.</p>';
+        return;
+    }
+
+    // Sort payments by date (newest first)
+    allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Create a table for better organization
+    const table = document.createElement('table');
+    table.className = 'payment-history-table';
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Tenant</th>
+                <th>Room</th>
+                <th>Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${allPayments.map(payment => `
+                <tr>
+                    <td>${new Date(payment.date).toLocaleDateString()}</td>
+                    <td>${payment.tenantName}</td>
+                    <td>${payment.roomNumber}</td>
+                    <td>₹${formatIndianNumber(Math.round(payment.amount))}</td>
+                    <td>
+                        <button onclick="editPayment(${payment.tenantId}, ${payment.paymentIndex})" class="edit-btn">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deletePayment(${payment.tenantId}, ${payment.paymentIndex})" class="delete-btn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('')}
+        </tbody>
+    `;
+
+    paymentHistoryList.appendChild(table);
+}
+
+// Edit payment
+async function editPayment(tenantId, paymentIndex) {
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    const tenant = tenants.find(t => t.id === tenantId);
+    const payment = tenant.paymentHistory[paymentIndex];
+
+    if (!tenant || !payment) {
+        alert('Payment not found');
+        return;
+    }
+
+    // Remove any existing payment form
+    const existingForm = document.querySelector('.payment-form');
+    if (existingForm) {
+        existingForm.remove();
+    }
+
+    const form = document.createElement('form');
+    form.className = 'payment-form';
+    form.innerHTML = `
+        <h3>Edit Payment</h3>
+        <div class="form-group">
+            <label for="paymentAmount">Payment Amount</label>
+            <input type="number" id="paymentAmount" required min="0" step="0.01" value="${payment.amount}">
+        </div>
+        <div class="form-group">
+            <label for="paymentDate">Payment Date</label>
+            <input type="date" id="paymentDate" required value="${payment.date}">
+        </div>
+        <div class="form-actions">
+            <button type="submit">Update Payment</button>
+            <button type="button" onclick="closePaymentForm()">Cancel</button>
+        </div>
+    `;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const amount = parseFloat(document.getElementById('paymentAmount').value);
+        const date = document.getElementById('paymentDate').value;
+
+        // Update payment in history
+        tenant.paymentHistory[paymentIndex] = {
+            amount: amount,
+            date: date
+        };
+
+        // Recalculate previous due
+        const totalRentDue = calculateRentDue(tenant);
+        const totalElectricityDue = calculateElectricityDue(tenant);
+        tenant.previousDue = totalRentDue + totalElectricityDue;
+
+        // Save tenant data
+        await saveTenant(tenant);
+        
+        // Close form and refresh display
+        closePaymentForm();
+        loadPaymentHistory();
+        loadTenants();
+        updateDashboardStats();
+    });
+
+    document.body.appendChild(form);
+}
+
+// Delete payment
+async function deletePayment(tenantId, paymentIndex) {
+    if (!confirm('Are you sure you want to delete this payment?')) {
+        return;
+    }
+
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    const tenant = tenants.find(t => t.id === tenantId);
+
+    if (!tenant || !tenant.paymentHistory) {
+        alert('Payment not found');
+        return;
+    }
+
+    // Remove payment from history
+    tenant.paymentHistory.splice(paymentIndex, 1);
+
+    // Recalculate previous due
+    const totalRentDue = calculateRentDue(tenant);
+    const totalElectricityDue = calculateElectricityDue(tenant);
+    tenant.previousDue = totalRentDue + totalElectricityDue;
+
+    // Save tenant data
+    await saveTenant(tenant);
+    
+    // Refresh display
+    loadPaymentHistory();
+    loadTenants();
+    updateDashboardStats();
+}
+
+// Add a function to check Firebase connection
+async function checkFirebaseConnection() {
+    try {
+        const testDoc = await db.collection('test').doc('connection-test').get();
+        console.log('Firebase connection successful');
+        return true;
+    } catch (error) {
+        console.error('Firebase connection failed:', error);
+        return false;
+    }
+}
+
+// Add a function to check Firebase rules
+async function checkFirebaseRules() {
+    try {
+        // Try to write a test document
+        await db.collection('test').doc('permission-test').set({
+            timestamp: new Date().toISOString()
+        });
+        
+        // Try to read the test document
+        const doc = await db.collection('test').doc('permission-test').get();
+        
+        // Clean up the test document
+        await db.collection('test').doc('permission-test').delete();
+        
+        console.log('Firebase rules are properly configured');
+        return true;
+    } catch (error) {
+        if (error.code === 'permission-denied') {
+            console.error('Firebase permission error. Please check your security rules in the Firebase Console.');
+            alert('Database access denied. Please check Firebase security rules.');
+        } else {
+            console.error('Firebase error:', error);
+        }
+        return false;
+    }
+}
+
+// Edit tenant
+function editTenant(tenantId) {
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    const tenant = tenants.find(t => t.id === tenantId);
+
+    if (!tenant) {
+        alert('Tenant not found');
+        return;
+    }
+
+    // Remove any existing edit form
+    const existingForm = document.querySelector('.edit-form');
+    if (existingForm) {
+        existingForm.remove();
+    }
+
+    const form = document.createElement('form');
+    form.className = 'edit-form';
+    form.innerHTML = `
+        <div class="edit-form-container">
+            <div class="edit-form-header">
+                <h3>Edit Tenant Details</h3>
+                <button type="button" class="close-btn" onclick="closeEditForm()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="edit-form-content">
+                <div class="form-group">
+                    <label for="editTenantName">Tenant Name</label>
+                    <input type="text" id="editTenantName" value="${tenant.tenantName}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editRoomNumber">Room Number</label>
+                    <input type="text" id="editRoomNumber" value="${tenant.roomNumber}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStartDate">Start Date</label>
+                    <input type="date" id="editStartDate" value="${tenant.startDate}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editEndDate">End Date (Leave empty for active tenant)</label>
+                    <input type="date" id="editEndDate" value="${tenant.endDate || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="editMonthlyRent">Monthly Rent</label>
+                    <input type="number" id="editMonthlyRent" value="${tenant.monthlyRent}" required min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="editAdvancePaid">Advance Paid</label>
+                    <input type="number" id="editAdvancePaid" value="${tenant.advancePaid}" required min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="editElectricityRate">Electricity Rate (per unit)</label>
+                    <input type="number" id="editElectricityRate" value="${tenant.electricityRate || DEFAULT_ELECTRICITY_RATE}" required min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="editStartingDue">Starting Due Amount</label>
+                    <input type="number" id="editStartingDue" value="${tenant.startingDue || 0}" min="0" step="0.01">
+                </div>
+            </div>
+            <div class="edit-form-footer">
+                <button type="button" class="cancel-btn" onclick="closeEditForm()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    `;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Update tenant data
+        tenant.tenantName = document.getElementById('editTenantName').value;
+        tenant.roomNumber = document.getElementById('editRoomNumber').value;
+        tenant.startDate = document.getElementById('editStartDate').value;
+        tenant.endDate = document.getElementById('editEndDate').value || null;
+        tenant.monthlyRent = parseFloat(document.getElementById('editMonthlyRent').value);
+        tenant.advancePaid = parseFloat(document.getElementById('editAdvancePaid').value);
+        tenant.electricityRate = parseFloat(document.getElementById('editElectricityRate').value);
+        tenant.startingDue = parseFloat(document.getElementById('editStartingDue').value) || 0;
+
+        // Save tenant data
+        await saveTenant(tenant);
+        
+        // Close form and refresh display
+        closeEditForm();
+        loadTenants();
+        updateDashboardStats();
+    });
+
+    document.body.appendChild(form);
+}
+
+// Close edit form
+function closeEditForm() {
+    const editForm = document.querySelector('.edit-form');
+    if (editForm) {
+        editForm.remove();
+    }
+}
+
+// ============= Theme Management =============
+
+// Theme variables
+const THEMES = {
+    light: {
+        '--background-color': '#f3f4f6',
+        '--card-background': '#ffffff',
+        '--text-primary': '#1f2937',
+        '--text-secondary': '#4b5563',
+        '--border-color': '#e5e7eb',
+        '--primary-color': '#3b82f6',
+        '--primary-hover': '#2563eb',
+        '--danger-color': '#ef4444',
+        '--success-color': '#22c55e',
+        '--shadow-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        '--shadow-md': '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        '--shadow-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+    },
+    dark: {
+        '--background-color': '#111827',
+        '--card-background': '#1f2937',
+        '--text-primary': '#f9fafb',
+        '--text-secondary': '#d1d5db',
+        '--border-color': '#374151',
+        '--primary-color': '#3b82f6',
+        '--primary-hover': '#60a5fa',
+        '--danger-color': '#ef4444',
+        '--success-color': '#22c55e',
+        '--shadow-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+        '--shadow-md': '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
+        '--shadow-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.4)'
+    }
+};
+
+// Initialize theme
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    updateThemeToggleIcon(savedTheme);
+}
+
+// Apply theme to document
+function applyTheme(theme) {
+    const root = document.documentElement;
+    const themeColors = THEMES[theme];
+    
+    Object.entries(themeColors).forEach(([property, value]) => {
+        root.style.setProperty(property, value);
+    });
+    
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+}
+
+// Update theme toggle icon
+function updateThemeToggleIcon(theme) {
+    const themeToggle = document.querySelector('.theme-toggle');
+    if (!themeToggle) return;
+
+    themeToggle.innerHTML = theme === 'light' 
+        ? '<i class="fas fa-moon"></i><i class="fas fa-sun"></i>'
+        : '<i class="fas fa-moon"></i><i class="fas fa-sun"></i>';
+}
+
+// Toggle theme
+function toggleTheme() {
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(newTheme);
+}
+
+// Add theme toggle button to DOM
+function addThemeToggle() {
+    // Remove existing toggle if any
+    const existingToggle = document.querySelector('.theme-toggle');
+    if (existingToggle) {
+        existingToggle.remove();
+    }
+
+    const themeToggle = document.createElement('button');
+    themeToggle.className = 'theme-toggle';
+    themeToggle.setAttribute('aria-label', 'Toggle theme');
+    themeToggle.innerHTML = '<i class="fas fa-moon"></i><i class="fas fa-sun"></i>';
+    themeToggle.onclick = toggleTheme;
+    document.body.appendChild(themeToggle);
+}
+
+// Initialize theme and toggle when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    addThemeToggle();
+    initializeTheme();
+});
+
+// Listen for system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!localStorage.getItem('theme')) {
+        applyTheme(e.matches ? 'dark' : 'light');
+    }
+});
+
+// Calculate current month's rent
+function calculateCurrentMonthRent(tenant) {
+    return tenant.monthlyRent;
+}
+
+// Calculate total amount due for a tenant (rent + electricity + previous balance)
+function calculateTotalAmountDue(tenant) {
+    const currentMonthRent = tenant.monthlyRent;
+    const currentMonthElectricityBill = calculateCurrentMonthBill(tenant);
+    const previousBalance = tenant.previousDue || 0;
+    return currentMonthRent + currentMonthElectricityBill + previousBalance;
+}
+
+// Add electricity reading with validation
+async function addElectricityReading(tenantId) {
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    const tenant = tenants.find(t => t.id === tenantId);
+
+    if (!tenant) {
+        alert('Tenant not found');
+        return;
+    }
+
+    const reading = prompt('Enter new electricity reading:');
+    if (reading === null) return;
+
+    const readingValue = parseFloat(reading);
+    if (isNaN(readingValue)) {
+        alert('Please enter a valid number');
+        return;
+    }
+
+    // Get the last reading
+    const lastReading = tenant.electricityReadings[tenant.electricityReadings.length - 1];
+    
+    // Validate that new reading is not less than the last reading
+    if (lastReading && readingValue < lastReading.reading) {
+        alert('New reading cannot be less than the last reading. Please check the reading value.');
+        return;
+    }
+
+    // Add new reading
+    tenant.electricityReadings.push({
+        reading: readingValue,
+        date: new Date().toISOString().split('T')[0]
+    });
+
+    // Calculate current month's bill
+    const currentMonthBill = calculateCurrentMonthBill(tenant);
+    
+    // Update previous due
+    tenant.previousDue = tenant.monthlyRent + currentMonthBill;
+
+    // Save tenant data
+    await saveTenant(tenant);
+    loadTenants();
+    updateDashboardStats();
+
+    // Show bill calculation
+    alert(`Current month's electricity bill: ₹${currentMonthBill}`);
+}
+
+// Add new tenant
+function addNewTenant() {
+    // Remove any existing form
+    const existingForm = document.querySelector('.add-tenant-form');
+    if (existingForm) {
+        existingForm.remove();
+    }
+
+    const form = document.createElement('form');
+    form.className = 'add-tenant-form';
+    form.innerHTML = `
+        <h3>Add New Tenant</h3>
+        <div class="form-group">
+            <label for="tenantName">Tenant Name</label>
+            <input type="text" id="tenantName" required>
+        </div>
+        <div class="form-group">
+            <label for="roomNumber">Room Number</label>
+            <input type="text" id="roomNumber" required>
+        </div>
+        <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <input type="date" id="startDate" required>
+        </div>
+        <div class="form-group">
+            <label for="monthlyRent">Monthly Rent</label>
+            <input type="number" id="monthlyRent" required min="0" step="0.01">
+        </div>
+        <div class="form-group">
+            <label for="advancePaid">Advance Paid</label>
+            <input type="number" id="advancePaid" required min="0" step="0.01">
+        </div>
+        <div class="form-group">
+            <label for="electricityRate">Electricity Rate (per unit)</label>
+            <input type="number" id="electricityRate" value="${DEFAULT_ELECTRICITY_RATE}" required min="0" step="0.01">
+        </div>
+        <div class="form-actions">
+            <button type="submit">Add Tenant</button>
+            <button type="button" onclick="closeAddTenantForm()">Cancel</button>
+        </div>
+    `;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const tenant = {
+            id: Date.now(),
+            tenantName: document.getElementById('tenantName').value,
+            roomNumber: document.getElementById('roomNumber').value,
+            startDate: document.getElementById('startDate').value,
+            monthlyRent: parseFloat(document.getElementById('monthlyRent').value),
+            advancePaid: parseFloat(document.getElementById('advancePaid').value),
+            electricityRate: parseFloat(document.getElementById('electricityRate').value),
+            electricityReadings: [],
+            paymentHistory: [],
+            previousDue: 0
+        };
+
+        // Save tenant data
+        await saveTenant(tenant);
+        
+        // Close form and refresh display
+        closeAddTenantForm();
+        loadTenants();
+        updateDashboardStats();
+    });
+
+    document.body.appendChild(form);
+}
+
+// Add tenant status filter
+function addTenantStatusFilter() {
+    const filterContainer = document.createElement('div');
+    filterContainer.className = 'tenant-filter';
+    filterContainer.innerHTML = `
+        <div class="filter-options">
+            <button class="filter-btn" data-status="all">All Tenants</button>
+            <button class="filter-btn active" data-status="active">Active Tenants</button>
+            <button class="filter-btn" data-status="past">Past Tenants</button>
+        </div>
+    `;
+
+    const tenantsList = document.getElementById('tenants-list');
+    tenantsList.parentNode.insertBefore(filterContainer, tenantsList);
+
+    // Add event listeners to filter buttons
+    const filterButtons = filterContainer.querySelectorAll('.filter-btn');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            // Filter tenants
+            const status = button.getAttribute('data-status');
+            filterTenants(status);
+        });
+    });
+
+    // Show active tenants by default
+    filterTenants('active');
+}
+
+// Filter tenants based on status
+function filterTenants(status) {
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    
+    let filteredTenants = tenants;
+    if (status === 'active') {
+        filteredTenants = tenants.filter(tenant => !tenant.endDate);
+    } else if (status === 'past') {
+        filteredTenants = tenants.filter(tenant => tenant.endDate);
+    }
+    
+    displayTenants(filteredTenants);
+}
+
+// Data Management Functions
+function handleDataExport() {
+    try {
+        const currentPlot = getCurrentPlot();
+        const plotKey = getPlotStorageKey(currentPlot);
+        const data = JSON.parse(localStorage.getItem(plotKey) || '[]');
+        
+        if (data.length === 0) {
+            alert('No data to export!');
+            return;
+        }
+
+        // Create a blob with the data
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        
+        // Create a download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rent_data_${currentPlot}_${new Date().toISOString().split('T')[0]}.json`;
+        
+        // Trigger the download
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting data: ' + error.message);
+    }
+}
+
+// Add this at the end of the file
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for collapsible sections
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('.info-section[data-section="basic-info"] h4, .info-section[data-section="electricity"] h4')) {
+            const section = e.target.parentElement;
+            section.classList.toggle('expanded');
+        }
+    });
+});
+
+// Function to format number with commas
+function formatNumberWithCommas(number) {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// Function to format number in Indian system (lakhs and crores)
+function formatIndianNumber(number) {
+    const numStr = number.toString();
+    const lastThree = numStr.substring(numStr.length - 3);
+    const otherNumbers = numStr.substring(0, numStr.length - 3);
+    const formatted = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + (otherNumbers ? "," : "") + lastThree;
+    return formatted;
+}
+
+// Function to calculate current month's total payments
+function calculateCurrentMonthPayments() {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    let totalPayments = 0;
+    
+    // Get current plot's tenants
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    
+    // Calculate total payments from all tenants' payment histories
+    tenants.forEach(tenant => {
+        if (tenant.paymentHistory) {
+            tenant.paymentHistory.forEach(payment => {
+                const paymentDate = new Date(payment.date);
+                if (paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
+                    totalPayments += parseFloat(payment.amount) || 0;
+                }
+            });
+        }
+    });
+    
+    // Update the display with rounded number in Indian format
+    document.getElementById('current-month-payments').textContent = `₹${formatIndianNumber(Math.round(totalPayments))}`;
+}
+
+// Initialize sidebar toggle
+function initializeSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const contentArea = document.querySelector('.content-area');
+    
+    // Check if we're on mobile
+    const isMobile = window.innerWidth <= 768;
+    
+    // Set initial state
+    if (isMobile) {
+        sidebar.classList.remove('active');
+        contentArea.classList.remove('sidebar-active');
+    }
+    
+    // Toggle sidebar
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+        contentArea.classList.toggle('sidebar-active');
+        
+        // Update toggle icon
+        const icon = sidebarToggle.querySelector('i');
+        if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (isMobile && 
+            !sidebar.contains(e.target) && 
+            !sidebarToggle.contains(e.target) && 
+            sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+            contentArea.classList.remove('sidebar-active');
+            const icon = sidebarToggle.querySelector('i');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) {
+            sidebar.classList.remove('active');
+            contentArea.classList.remove('sidebar-active');
+            const icon = sidebarToggle.querySelector('i');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    });
+}
+
+function updateCombinedStats() {
+    let combinedTenants = 0;
+    let combinedDue = 0;
+    let combinedPayments = 0;
+    let combinedMonthlyRent = 0;
+    let combinedMonthlyBill = 0;
+
+    // Calculate stats for each plot
+    PLOTS.forEach(plot => {
+        const tenants = getTenants(plot);
+        
+        combinedTenants += tenants.length;
+        
+        // Calculate total due for this plot using calculatePreviousDue
+        const plotDue = tenants.reduce((sum, tenant) => {
+            const totalDue = calculatePreviousDue(tenant);
+            return sum + totalDue;
+        }, 0);
+        combinedDue += plotDue;
+
+        // Calculate monthly rent for this plot
+        const plotMonthlyRent = tenants.reduce((sum, tenant) => {
+            const rent = tenant.monthlyRent || 0;
+            return sum + rent;
+        }, 0);
+        combinedMonthlyRent += plotMonthlyRent;
+
+        // Calculate monthly bill for this plot
+        const plotMonthlyBill = tenants.reduce((sum, tenant) => {
+            const bill = calculateCurrentMonthBill(tenant);
+            return sum + bill;
+        }, 0);
+        combinedMonthlyBill += plotMonthlyBill;
+
+        // Calculate current month payments for this plot
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const plotPayments = tenants.reduce((sum, tenant) => {
+            const tenantPayments = tenant.paymentHistory || [];
+            const currentMonthPayments = tenantPayments
+                .filter(payment => payment.date.startsWith(currentMonth))
+                .reduce((paymentSum, payment) => paymentSum + (payment.amount || 0), 0);
+            return sum + currentMonthPayments;
+        }, 0);
+        combinedPayments += plotPayments;
+    });
+
+    // Update combined stats display
+    document.getElementById('combined-total-tenants').textContent = formatIndianNumber(combinedTenants);
+    document.getElementById('combined-total-rent').textContent = `₹${formatIndianNumber(Math.round(combinedDue))}`;
+    document.getElementById('combined-total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyRent))}`;
+    document.getElementById('combined-total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyBill))}`;
+    document.getElementById('combined-current-month-payments').textContent = `₹${formatIndianNumber(Math.round(combinedPayments))}`;
+}
+
+// Sync data with Firebase
+async function handleDataSync() {
+    const syncStatus = document.getElementById('sync-status');
+    const syncMessage = syncStatus.querySelector('.sync-message');
+    const syncBtn = document.getElementById('sync-data');
+    
+    try {
+        // Show syncing status
+        syncStatus.style.display = 'flex';
+        syncStatus.className = 'sync-status syncing';
+        syncMessage.innerHTML = '<i class="fas fa-sync fa-spin"></i> Syncing data...';
+        syncBtn.disabled = true;
+
+        // Get current plot
+        const currentPlot = getCurrentPlot();
+        const plotKey = getPlotStorageKey(currentPlot);
+        const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+
+        // Sync each tenant to Firebase
+        for (const tenant of tenants) {
+            await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
+        }
+
+        // Load latest data from Firebase
+        await loadTenantsFromFirebase();
+
+        // Show success status
+        syncStatus.className = 'sync-status success';
+        syncMessage.innerHTML = '<i class="fas fa-check-circle"></i> Data synced successfully!';
+        
+        // Hide status after 3 seconds
+        setTimeout(() => {
+            syncStatus.style.display = 'none';
+        }, 3000);
+    } catch (error) {
+        console.error('Sync error:', error);
+        
+        // Show error status
+        syncStatus.className = 'sync-status error';
+        syncMessage.innerHTML = `<i class="fas fa-exclamation-circle"></i> Sync failed: ${error.message}`;
+        
+        // Hide status after 5 seconds
+        setTimeout(() => {
+            syncStatus.style.display = 'none';
+        }, 5000);
+    } finally {
+        syncBtn.disabled = false;
+    }
+}
