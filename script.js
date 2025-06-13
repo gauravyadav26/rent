@@ -17,71 +17,19 @@ const db = firebase.firestore();
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
 
-// Register service worker
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        try {
-            const registration = await navigator.serviceWorker.register('/service-worker.js', {
-                updateViaCache: 'none'
-            });
-            console.log('ServiceWorker registration successful');
-
-            // Handle controller change
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    refreshing = true;
-                    window.location.reload();
-                }
-            });
-        } catch (error) {
-            console.error('ServiceWorker registration failed:', error);
-        }
-    });
-}
-
 // Add PWA install prompt
 let deferredPrompt;
-const installButton = document.createElement('button');
-installButton.className = 'install-pwa-btn';
-installButton.innerHTML = '<i class="fas fa-download"></i> Install App';
-installButton.style.display = 'none';
-
-// Add the button to the DOM
-document.body.appendChild(installButton);
 
 window.addEventListener('beforeinstallprompt', (e) => {
     // Prevent Chrome 67 and earlier from automatically showing the prompt
     e.preventDefault();
     // Stash the event so it can be triggered later
     deferredPrompt = e;
-    // Show the install button
-    installButton.style.display = 'block';
-});
-
-installButton.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    
-    // Show the install prompt
-    deferredPrompt.prompt();
-    
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
-    
-    // We no longer need the prompt. Clear it up
-    deferredPrompt = null;
-    
-    // Hide the install button
-    installButton.style.display = 'none';
 });
 
 // Listen for successful installation
-window.addEventListener('appinstalled', (evt) => {
-    // Log install to analytics
-    console.log('Application was installed');
-    // Hide the install button
-    installButton.style.display = 'none';
+window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
 });
 
 // Initialize the application
