@@ -242,10 +242,10 @@ function initializePlotTabs() {
                 loadPaymentHistory();
             }
             
-            // Ensure the tenants section is visible and data is displayed
+            // Only show tenants if the tenants section is active
             const tenantsSection = document.getElementById('tenants');
-            if (tenantsSection) {
-                tenantsSection.style.display = 'block';
+            const isTenantsSectionActive = tenantsSection && tenantsSection.style.display === 'block';
+            if (isTenantsSectionActive) {
                 loadTenants();
             }
         });
