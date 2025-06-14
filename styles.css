@@ -2169,7 +2169,7 @@ input:focus, select:focus, textarea:focus {
 
 .monthly-stat-card {
     background-color: var(--card-background);
-    padding: 1.5rem;
+    padding: 1rem;
     border-radius: 0.75rem;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
@@ -2192,6 +2192,7 @@ input:focus, select:focus, textarea:focus {
     color: var(--text-primary);
     font-size: var(--font-size-2xl);
     font-weight: 600;
+    margin: 0.5rem 0;
 }
 
 /* Total Stats Styles */
