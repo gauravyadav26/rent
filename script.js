@@ -191,6 +191,8 @@ function initializeNavigation() {
                 loadPaymentHistory();
             } else if (targetSection === 'tenants') {
                 loadTenants();
+            } else if (targetSection === 'monthly-history') {
+                loadMonthlyHistory();
             }
             
             // Close sidebar on mobile
@@ -471,9 +473,31 @@ function createTenantCard(tenant) {
                 
                 <div class="info-section" data-section="electricity">
                     <h4><i class="fas fa-bolt"></i> Electricity Information</h4>
-                    <p><strong>Start Reading:</strong> ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})</p>
-                    <p><strong>Previous Reading:</strong> ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})</p>
-                    <p><strong>Latest Reading:</strong> ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})</p>
+                    <p>
+                        <strong>Start Reading:</strong> 
+                        ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})
+                        <button onclick="editElectricityReading(${tenant.id}, 0)" class="inline-edit-btn" title="Edit Start Reading">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </p>
+                    <p>
+                        <strong>Previous Reading:</strong> 
+                        ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})
+                        ${tenant.electricityReadings.length > 1 ? `
+                            <button onclick="editElectricityReading(${tenant.id}, ${tenant.electricityReadings.length - 2})" class="inline-edit-btn" title="Edit Previous Reading">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        ` : ''}
+                    </p>
+                    <p>
+                        <strong>Latest Reading:</strong> 
+                        ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})
+                        ${tenant.electricityReadings.length > 0 ? `
+                            <button onclick="editElectricityReading(${tenant.id}, ${tenant.electricityReadings.length - 1})" class="inline-edit-btn" title="Edit Latest Reading">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        ` : ''}
+                    </p>
                     <p><strong>Current Month Bill:</strong> ₹${formatIndianNumber(Math.round(currentMonthBill))}</p>
                     <p><strong>Total Electricity Bill:</strong> ₹${formatIndianNumber(Math.round(totalElectricityBill))}</p>
                 </div>
@@ -1630,4 +1654,178 @@ async function handleDataSync() {
     } finally {
         syncBtn.disabled = false;
     }
+}
+
+// Edit electricity reading
+async function editElectricityReading(tenantId, readingIndex) {
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    const tenant = tenants.find(t => t.id === tenantId);
+    const reading = tenant.electricityReadings[readingIndex];
+
+    if (!tenant || !reading) {
+        alert('Reading not found');
+        return;
+    }
+
+    const newReading = prompt('Enter new electricity reading:', reading.reading);
+    if (newReading === null) return;
+
+    const readingValue = parseFloat(newReading);
+    if (isNaN(readingValue)) {
+        alert('Please enter a valid number');
+        return;
+    }
+
+    // Validate reading value
+    if (readingIndex > 0 && readingValue < tenant.electricityReadings[readingIndex - 1].reading) {
+        alert('New reading cannot be less than the previous reading');
+        return;
+    }
+    if (readingIndex < tenant.electricityReadings.length - 1 && readingValue > tenant.electricityReadings[readingIndex + 1].reading) {
+        alert('New reading cannot be greater than the next reading');
+        return;
+    }
+
+    // Update reading
+    tenant.electricityReadings[readingIndex].reading = readingValue;
+
+    // Recalculate bills and update previous due
+    const currentMonthBill = calculateCurrentMonthBill(tenant);
+    tenant.previousDue = tenant.monthlyRent + currentMonthBill;
+
+    // Save tenant data
+    await saveTenant(tenant);
+    loadTenants();
+    updateDashboardStats();
+
+    alert('Reading updated successfully');
+}
+
+// Load monthly history
+function loadMonthlyHistory() {
+    // Get data from all plots
+    const allTenants = [];
+    PLOTS.forEach(plot => {
+        const plotKey = getPlotStorageKey(plot);
+        const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+        allTenants.push(...tenants);
+    });
+    
+    // Get all months from tenant data
+    const months = new Set();
+    allTenants.forEach(tenant => {
+        // Add months from payment history
+        tenant.paymentHistory?.forEach(payment => {
+            const date = new Date(payment.date);
+            months.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+        });
+        
+        // Add months from electricity readings
+        tenant.electricityReadings?.forEach(reading => {
+            const date = new Date(reading.date);
+            months.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+        });
+    });
+    
+    // Convert to array and sort in descending order (latest first)
+    const sortedMonths = Array.from(months).sort().reverse();
+    
+    // Calculate total payments and bills till now
+    let totalPaymentsTillNow = 0;
+    let totalBillsTillNow = 0;
+    
+    allTenants.forEach(tenant => {
+        // Calculate total payments
+        if (tenant.paymentHistory) {
+            totalPaymentsTillNow += tenant.paymentHistory.reduce((sum, payment) => sum + payment.amount, 0);
+        }
+        
+        // Calculate total bills
+        if (tenant.electricityReadings && tenant.electricityReadings.length >= 2) {
+            const startReading = tenant.electricityReadings[0];
+            const lastReading = tenant.electricityReadings[tenant.electricityReadings.length - 1];
+            const totalUnits = lastReading.reading - startReading.reading;
+            totalBillsTillNow += totalUnits * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
+        }
+    });
+    
+    // Update total till now stats
+    document.getElementById('total-payments-till-now').textContent = `₹${formatIndianNumber(Math.round(totalPaymentsTillNow))}`;
+    document.getElementById('total-bills-till-now').textContent = `₹${formatIndianNumber(Math.round(totalBillsTillNow))}`;
+    
+    // Calculate monthly totals
+    const monthlyData = sortedMonths.map(month => {
+        const [year, monthNum] = month.split('-');
+        const monthStart = new Date(year, monthNum - 1, 1);
+        const monthEnd = new Date(year, monthNum, 0);
+        
+        let totalRent = 0;
+        let totalBills = 0;
+        let totalPayments = 0;
+        
+        allTenants.forEach(tenant => {
+            // Calculate rent for the month
+            if (tenant.startDate && new Date(tenant.startDate) <= monthEnd) {
+                totalRent += tenant.monthlyRent || 0;
+            }
+            
+            // Calculate bills for the month
+            const monthReadings = tenant.electricityReadings?.filter(reading => {
+                const readingDate = new Date(reading.date);
+                return readingDate >= monthStart && readingDate <= monthEnd;
+            });
+            
+            if (monthReadings && monthReadings.length >= 2) {
+                const units = monthReadings[monthReadings.length - 1].reading - monthReadings[0].reading;
+                totalBills += units * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
+            }
+            
+            // Calculate payments for the month
+            const monthPayments = tenant.paymentHistory?.filter(payment => {
+                const paymentDate = new Date(payment.date);
+                return paymentDate >= monthStart && paymentDate <= monthEnd;
+            });
+            
+            if (monthPayments) {
+                totalPayments += monthPayments.reduce((sum, payment) => sum + payment.amount, 0);
+            }
+        });
+        
+        return {
+            month,
+            totalRent,
+            totalBills,
+            totalPayments
+        };
+    });
+    
+    // Update monthly stats with the latest month (first in the array)
+    const currentMonth = monthlyData[0];
+    if (currentMonth) {
+        document.getElementById('monthly-total-rent').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalRent))}`;
+        document.getElementById('monthly-total-bills').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalBills))}`;
+        document.getElementById('monthly-total-payments').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalPayments))}`;
+    }
+    
+    // Update monthly breakdown
+    const breakdownHtml = monthlyData.map(data => {
+        const [year, month] = data.month.split('-');
+        const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+        const yearMonth = `${monthName} ${year}`;
+        
+        return `
+            <div class="monthly-item">
+                <div class="month">${yearMonth}</div>
+                <div class="amount">Rent: ₹${formatIndianNumber(Math.round(data.totalRent))}</div>
+                <div class="amount">Bills: ₹${formatIndianNumber(Math.round(data.totalBills))}</div>
+                <div class="amount ${data.totalPayments >= (data.totalRent + data.totalBills) ? 'positive' : 'negative'}">
+                    Payments: ₹${formatIndianNumber(Math.round(data.totalPayments))}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    document.getElementById('monthly-breakdown').innerHTML = breakdownHtml;
 }

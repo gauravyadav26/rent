@@ -75,6 +75,10 @@
                     <i class="fas fa-history"></i>
                     Payment History
                 </button>
+                <button class="nav-btn" data-section="monthly-history">
+                    <i class="fas fa-calendar-alt"></i>
+                    Monthly History
+                </button>
                 <button class="nav-btn" data-section="data-management">
                     <i class="fas fa-database"></i>
                     Data Management
@@ -118,27 +122,27 @@
                         <div class="stat-card">
                             <i class="fas fa-users"></i>
                             <span id="combined-total-tenants">0</span>
-                            <label>Total Tenants</label>
+                            <label>Tenants</label>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-money-bill-wave"></i>
                             <span id="combined-total-rent">₹0</span>
-                            <label>Total Due</label>
+                            <label>Due</label>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-calendar-check"></i>
                             <span id="combined-current-month-payments">₹0</span>
-                            <label>Total Payments</label>
+                            <label>Payments</label>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-home"></i>
                             <span id="combined-total-monthly-rent">₹0</span>
-                            <label>Total Monthly Rent</label>
+                            <label>Monthly Rent</label>
                         </div>
                         <div class="stat-card">
                             <i class="fas fa-bolt"></i>
                             <span id="combined-total-monthly-bill">₹0</span>
-                            <label>Total Monthly Bill</label>
+                            <label>Monthly Bill</label>
                         </div>
                     </div>
                 </section>
@@ -230,6 +234,39 @@
                     </div>
                     <div class="payment-history-list" id="payment-history-list">
                         <!-- Payment history will be displayed here -->
+                    </div>
+                </section>
+
+                <!-- Monthly History Section -->
+                <section id="monthly-history" class="section">
+                    <h2><i class="fas fa-calendar-alt"></i> Monthly History</h2>
+                    <div class="monthly-history-container">
+                        <div class="monthly-stats">
+                            <div class="monthly-stat-card">
+                                <h3>Total Monthly Rent</h3>
+                                <p id="monthly-total-rent">₹0</p>
+                            </div>
+                            <div class="monthly-stat-card">
+                                <h3>Total Monthly Bills</h3>
+                                <p id="monthly-total-bills">₹0</p>
+                            </div>
+                            <div class="monthly-stat-card">
+                                <h3>Total Monthly Payments</h3>
+                                <p id="monthly-total-payments">₹0</p>
+                            </div>
+                            <div class="monthly-stat-card">
+                                <h3>Total Payments</h3>
+                                <p id="total-payments-till-now">₹0</p>
+                            </div>
+                            <div class="monthly-stat-card">
+                                <h3>Total Bills</h3>
+                                <p id="total-bills-till-now">₹0</p>
+                            </div>
+                        </div>
+                        <div class="monthly-history-list">
+                            <h3>Monthly Breakdown</h3>
+                            <div id="monthly-breakdown"></div>
+                        </div>
                     </div>
                 </section>
 

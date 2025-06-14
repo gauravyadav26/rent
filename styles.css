@@ -14,6 +14,14 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --font-size-xs: clamp(0.6rem, 0.55rem + 0.4vw, 0.8rem);
+    --font-size-sm: clamp(0.7rem, 0.65rem + 0.5vw, 0.95rem);
+    --font-size-base: clamp(0.8rem, 0.75rem + 0.6vw, 1.1rem);
+    --font-size-lg: clamp(0.9rem, 0.85rem + 0.7vw, 1.25rem);
+    --font-size-xl: clamp(1rem, 0.9rem + 0.8vw, 1.4rem);
+    --font-size-2xl: clamp(1.125rem, 1rem + 1vw, 1.75rem);
+    --font-size-3xl: clamp(1.25rem, 1.1rem + 1.2vw, 2rem);
+    --font-size-4xl: clamp(1.5rem, 1.3rem + 1.5vw, 2.25rem);
 }
 
 [data-theme="dark"] {
@@ -37,7 +45,7 @@ body {
     background-color: var(--background-color);
     color: var(--text-primary);
     line-height: 1.4;
-    font-size: 0.9rem;
+    font-size: var(--font-size-base);
     transition: background-color 0.3s ease, color 0.3s ease;
     background: linear-gradient(-45deg, var(--background-color), var(--card-background), var(--background-color));
     background-size: 400% 400%;
@@ -78,7 +86,7 @@ header {
 
 header h1 {
     color: var(--primary-color);
-    font-size: 1.5rem;
+    font-size: var(--font-size-4xl);
     margin-top: 0;
     margin-bottom: 1rem;
     display: flex;
@@ -274,7 +282,7 @@ header h1 {
     border-radius: 0.5rem;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     gap: 0.75rem;
 }
@@ -307,7 +315,7 @@ header h1 {
 
 .section h2 {
     color: var(--text-primary);
-    font-size: 1.5rem;
+    font-size: var(--font-size-3xl);
     margin: 1rem 0;
     display: flex;
     align-items: center;
@@ -329,7 +337,7 @@ label {
     display: block;
     margin-bottom: 0.4rem;
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
 }
 
@@ -340,7 +348,7 @@ input, select, textarea {
     border-radius: 0.5rem;
     background-color: var(--background-color);
     color: var(--text-primary);
-    font-size: 0.85rem;
+    font-size: var(--font-size-base);
     transition: all 0.2s;
 }
 
@@ -358,7 +366,7 @@ input:focus, select:focus, textarea:focus {
     border: none;
     border-radius: 0.5rem;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     transition: all 0.2s;
     display: flex;
@@ -401,7 +409,7 @@ input:focus, select:focus, textarea:focus {
     border: none;
     border-radius: 0.5rem;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     font-weight: 500;
     transition: all 0.2s;
     position: relative;
@@ -471,13 +479,12 @@ input:focus, select:focus, textarea:focus {
 
 .tenant-card h3 {
     color: var(--text-primary);
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    font-size: var(--font-size-base);
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
     font-weight: 600;
 }
 
@@ -509,7 +516,7 @@ input:focus, select:focus, textarea:focus {
 .info-section h4 {
     color: var(--primary-color);
     margin-bottom: 0.5rem;
-    font-size: 0.9rem;
+    font-size: var(--font-size-base);
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -517,8 +524,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .info-section p {
-    margin: 0.4rem 0;
-    font-size: 0.85rem;
+    margin: 0.25rem 0;
+    font-size: var(--font-size-xs);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -544,7 +551,6 @@ input:focus, select:focus, textarea:focus {
     gap: 0.5rem;
     margin-top: 1rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--border-color);
     flex-wrap: wrap;
 }
 
@@ -553,7 +559,7 @@ input:focus, select:focus, textarea:focus {
     min-width: 100px;
     max-width: 150px;
     padding: 0.4rem 0.75rem;
-    font-size: 0.8rem;
+    font-size: var(--font-size-sm);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -573,7 +579,7 @@ input:focus, select:focus, textarea:focus {
     border: none;
     border-radius: 0.75rem;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: var(--font-size-sm);
     font-weight: 600;
     transition: all 0.3s ease;
     display: flex;
@@ -662,7 +668,7 @@ input:focus, select:focus, textarea:focus {
     
     .info-section p {
         padding: 0.3rem;
-        font-size: 0.8rem;
+        font-size: var(--font-size-sm);
     }
     
     .tenant-actions {
@@ -673,7 +679,7 @@ input:focus, select:focus, textarea:focus {
     .tenant-actions button {
         flex: 0 1 auto;
         padding: 0.3rem 0.6rem;
-        font-size: 0.75rem;
+        font-size: var(--font-size-sm);
     }
     
     body {
@@ -796,7 +802,7 @@ input:focus, select:focus, textarea:focus {
 .edit-form h3 {
     color: var(--text-primary);
     margin-bottom: 1.5rem;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1071,7 +1077,7 @@ td {
 .payment-form h3 {
     color: var(--text-primary);
     margin-bottom: 2rem;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     text-align: center;
     font-weight: 700;
 }
@@ -1095,7 +1101,7 @@ td {
     border-radius: 0.5rem;
     background-color: var(--background-color);
     color: var(--text-primary);
-    font-size: 1rem;
+    font-size: var(--font-size-base);
     transition: all 0.3s ease;
 }
 
@@ -1117,7 +1123,7 @@ td {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 0.5rem;
-    font-size: 1rem;
+    font-size: var(--font-size-base);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1175,7 +1181,7 @@ td {
     color: var(--text-primary);
     font-weight: 600;
     text-transform: uppercase;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
     letter-spacing: 0.05em;
 }
 
@@ -1450,7 +1456,7 @@ td {
 .edit-form-header h3 {
     margin: 0;
     color: var(--text-primary);
-    font-size: 1.4em;
+    font-size: var(--font-size-xl);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -1504,7 +1510,7 @@ td {
     margin-bottom: 8px;
     color: var(--text-secondary);
     font-weight: 500;
-    font-size: 0.95em;
+    font-size: var(--font-size-sm);
 }
 
 .form-group input {
@@ -1514,7 +1520,7 @@ td {
     border-radius: 8px;
     background: var(--background-color);
     color: var(--text-primary);
-    font-size: 1em;
+    font-size: var(--font-size-base);
     transition: all 0.3s ease;
     box-sizing: border-box;
 }
@@ -1535,7 +1541,7 @@ td {
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 1em;
+    font-size: var(--font-size-sm);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
@@ -1601,12 +1607,12 @@ td {
     }
 
     .edit-form-header h3 {
-        font-size: 1.2em;
+        font-size: var(--font-size-xl);
     }
 
     .submit-btn, .cancel-btn {
         padding: 10px 20px;
-        font-size: 0.95em;
+        font-size: var(--font-size-sm);
     }
 }
 
@@ -1646,7 +1652,7 @@ td {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: var(--font-size-sm);
     transition: background-color 0.2s;
 }
 
@@ -1928,7 +1934,7 @@ input:focus, select:focus, textarea:focus {
 
 .summary-stats .stat-card span {
     display: block;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     font-weight: bold;
     margin: 0.5rem 0;
     color: var(--text-primary);
@@ -1936,7 +1942,8 @@ input:focus, select:focus, textarea:focus {
 
 .summary-stats .stat-card label {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
 }
 
 /* Dark theme adjustments */
@@ -1974,7 +1981,7 @@ input:focus, select:focus, textarea:focus {
 
 .payment-summary .summary-card span {
     display: block;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl);
     font-weight: bold;
     margin: 0.5rem 0;
     color: var(--text-primary);
@@ -1982,7 +1989,7 @@ input:focus, select:focus, textarea:focus {
 
 .payment-summary .summary-card label {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
 }
 
 [data-theme="dark"] .payment-summary .summary-card {
@@ -1995,35 +2002,74 @@ input:focus, select:focus, textarea:focus {
     padding-top: 1rem;
     border-top: 2px solid var(--border-color);
     color: var(--primary-color);
-    font-size: 1.2rem;
+    font-size: var(--font-size-xl);
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
 .combined-stats {
-    margin-top: 1rem;
+    background: linear-gradient(135deg, var(--card-background) 0%, var(--background-color) 100%);
+    border: 2px solid var(--primary-color);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.combined-stats::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+}
+
+.combined-stats h2 {
+    color: var(--primary-color);
+    font-size: var(--font-size-lg);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.combined-stats h2::before {
+    content: '\f0d6';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 1.1em;
 }
 
 .combined-stats .stat-card {
-    background-color: var(--card-background);
-    border: 2px solid var(--primary-color);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: all 0.3s ease;
 }
 
 .combined-stats .stat-card:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
 }
 
-.combined-stats .stat-card i {
-    color: var(--primary-color);
-    background: rgba(59, 130, 246, 0.1);
+.combined-stats .stat-card span {
+    font-size: var(--font-size-xl);
+    background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.combined-stats .stat-card:hover i {
-    transform: scale(1.1) rotate(5deg);
-    background: rgba(59, 130, 246, 0.15);
+.combined-stats .stat-card label {
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
 }
 
 /* Update Notification */
@@ -2089,4 +2135,189 @@ input:focus, select:focus, textarea:focus {
 
 [data-theme="dark"] .update-content button:hover {
     background-color: #374151;
+}
+
+.inline-edit-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 2px 6px;
+    margin-left: 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.inline-edit-btn:hover {
+    opacity: 1;
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Monthly History Styles */
+.monthly-history-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.monthly-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.monthly-stat-card {
+    background-color: var(--card-background);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.monthly-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.monthly-stat-card h3 {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: 0.5rem;
+}
+
+.monthly-stat-card p {
+    color: var(--text-primary);
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+}
+
+/* Total Stats Styles */
+.monthly-stat-card:nth-last-child(-n+2) {
+    background: linear-gradient(135deg, var(--card-background) 0%, var(--background-color) 100%);
+    border: 2px solid var(--primary-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.monthly-stat-card:nth-last-child(-n+2)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+}
+
+.monthly-stat-card:nth-last-child(-n+2) h3 {
+    color: var(--primary-color);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.monthly-stat-card:nth-last-child(-n+2) h3::before {
+    content: '\f0d6';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 1.1rem;
+}
+
+.monthly-stat-card:nth-last-child(-n+2) p {
+    font-size: var(--font-size-3xl);
+    background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.monthly-stat-card:nth-last-child(-n+2):hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.monthly-history-list {
+    background-color: var(--card-background);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.monthly-history-list h3 {
+    color: var(--text-primary);
+    font-size: var(--font-size-lg);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.monthly-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.monthly-item {
+    display: grid;
+    grid-template-columns: 150px 1fr 1fr 1fr;
+    gap: 1rem;
+    padding: 1.25rem;
+    background-color: var(--background-color);
+    border-radius: 0.75rem;
+    align-items: center;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.monthly-item:last-child {
+    margin-bottom: 0;
+}
+
+.monthly-item:hover {
+    transform: translateX(5px);
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: var(--primary-color);
+}
+
+.monthly-item .month {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+}
+
+.monthly-item .amount {
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+}
+
+.monthly-item .amount.positive {
+    color: var(--success-color);
+}
+
+.monthly-item .amount.negative {
+    color: var(--danger-color);
+}
+
+@media (max-width: 768px) {
+    .monthly-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .monthly-item > div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        background-color: var(--card-background);
+        border-radius: 0.25rem;
+        font-size: var(--font-size-sm);
+    }
 } 
