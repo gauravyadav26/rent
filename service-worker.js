@@ -1,6 +1,6 @@
-const CACHE_NAME = 'rent-management-v1';
-const STATIC_CACHE_NAME = 'static-v1';
-const DYNAMIC_CACHE_NAME = 'dynamic-v1';
+const CACHE_NAME = 'rent-manager-v1';
+const STATIC_CACHE = 'static-v1';
+const DYNAMIC_CACHE = 'dynamic-v1';
 
 // Static assets to cache
 const STATIC_ASSETS = [
@@ -11,10 +11,8 @@ const STATIC_ASSETS = [
     '/manifest.json',
     '/icons/icon-192x192.png',
     '/icons/icon-512x512.png',
-    'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
-    'https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js'
+    'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'
 ];
 
 // Debug helper
@@ -22,14 +20,14 @@ function debug(message) {
     console.log(`[Service Worker] ${message}`);
 }
 
-// Install event - cache static assets
-self.addEventListener('install', (event) => {
+// Install: Cache static assets
+self.addEventListener('install', event => {
     debug('Installing Service Worker...');
     event.waitUntil(
         Promise.all([
             // Cache static assets
-            caches.open(STATIC_CACHE_NAME)
-                .then((cache) => {
+            caches.open(STATIC_CACHE)
+                .then(cache => {
                     debug('Caching static assets...');
                     return cache.addAll(STATIC_ASSETS);
                 })
@@ -41,18 +39,18 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
+// Activate: Clean up old caches
+self.addEventListener('activate', event => {
     debug('Activating Service Worker...');
     event.waitUntil(
         Promise.all([
             // Take control of all clients
             self.clients.claim(),
             // Clean up old caches
-            caches.keys().then((cacheNames) => {
+            caches.keys().then(cacheNames => {
                 return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        if (cacheName !== STATIC_CACHE_NAME && cacheName !== DYNAMIC_CACHE_NAME) {
+                    cacheNames.map(cacheName => {
+                        if (![STATIC_CACHE, DYNAMIC_CACHE].includes(cacheName)) {
                             debug('Deleting old cache: ' + cacheName);
                             return caches.delete(cacheName);
                         }
@@ -108,122 +106,58 @@ function shouldBypass(request) {
     return false;
 }
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-    // Skip non-GET requests
-    if (event.request.method !== 'GET') return;
+// Fetch: Cache-first with network fallback
+self.addEventListener('fetch', event => {
+    const request = event.request;
+    const url = new URL(request.url);
 
-    // Handle Firebase requests differently
-    if (event.request.url.includes('firestore.googleapis.com')) {
-        event.respondWith(handleFirebaseRequest(event.request));
+    // Bypass non-cacheable requests
+    if (shouldBypass(request)) {
+        event.respondWith(fetch(request));
         return;
     }
 
+    // Navigation requests (fallback to index.html)
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .catch(() => caches.match('/index.html'))
+        );
+        return;
+    }
+
+    // Cache-first strategy for all other requests
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Return cached response if found
-                if (response) {
-                    return response;
+        caches.match(request)
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    debug(`Serving from cache: ${url}`);
+                    return cachedResponse;
                 }
 
-                // Clone the request because it can only be used once
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest).then(
-                    (response) => {
-                        // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
+                return fetch(request)
+                    .then(networkResponse => {
+                        // Only cache successful, non-opaque responses
+                        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                            const responseToCache = networkResponse.clone();
+                            caches.open(DYNAMIC_CACHE)
+                                .then(cache => {
+                                    debug(`Caching new resource: ${url}`);
+                                    cache.put(request, responseToCache);
+                                });
                         }
-
-                        // Clone the response because it can only be used once
-                        const responseToCache = response.clone();
-
-                        // Cache the response for future use
-                        caches.open(DYNAMIC_CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return response;
-                    }
-                );
+                        return networkResponse;
+                    })
+                    .catch(() => {
+                        debug(`Fetch failed, serving fallback for: ${url}`);
+                        return new Response('Offline', {
+                            status: 503,
+                            headers: { 'Content-Type': 'text/plain' }
+                        });
+                    });
             })
     );
 });
-
-// Handle Firebase requests with custom caching strategy
-async function handleFirebaseRequest(request) {
-    try {
-        // Try network first for Firebase requests
-        const networkResponse = await fetch(request);
-        
-        // Cache the response
-        const cache = await caches.open(DYNAMIC_CACHE_NAME);
-        cache.put(request, networkResponse.clone());
-        
-        return networkResponse;
-    } catch (error) {
-        // If network fails, try cache
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) {
-            return cachedResponse;
-        }
-        
-        // If both network and cache fail, return error
-        throw error;
-    }
-}
-
-// Background sync for offline data
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-tenant-data') {
-        event.waitUntil(syncTenantData());
-    }
-});
-
-// Function to sync tenant data
-async function syncTenantData() {
-    try {
-        const db = await openDB();
-        const offlineData = await db.getAll('offlineTenants');
-        
-        for (const data of offlineData) {
-            try {
-                // Attempt to sync with Firebase
-                await fetch('/api/sync-tenant', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-                
-                // Remove from offline storage if successful
-                await db.delete('offlineTenants', data.id);
-            } catch (error) {
-                console.error('Failed to sync tenant data:', error);
-            }
-        }
-    } catch (error) {
-        console.error('Error in background sync:', error);
-    }
-}
-
-// Helper function to open IndexedDB
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('RentManagementDB', 1);
-        
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-        
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('offlineTenants')) {
-                db.createObjectStore('offlineTenants', { keyPath: 'id' });
-            }
-        };
-    });
-}
 
 // Skip waiting on update
 self.addEventListener('message', event => {

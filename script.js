@@ -93,103 +93,24 @@ function setupPeriodicRefresh() {
     }, 15 * 60 * 1000); // 15 minutes
 }
 
-// Cache management functions
-const CACHE_CONFIG = {
-    TENANT_CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-    STATS_CACHE_DURATION: 15 * 60 * 1000, // 15 minutes
-};
-
-// Initialize IndexedDB
-async function initDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('RentManagementDB', 1);
-        
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-        
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            
-            // Create object stores
-            if (!db.objectStoreNames.contains('tenants')) {
-                db.createObjectStore('tenants', { keyPath: 'id' });
-            }
-            if (!db.objectStoreNames.contains('stats')) {
-                db.createObjectStore('stats', { keyPath: 'plot' });
-            }
-            if (!db.objectStoreNames.contains('offlineChanges')) {
-                db.createObjectStore('offlineChanges', { keyPath: 'id', autoIncrement: true });
-            }
-        };
-    });
-}
-
-// Cache tenant data
-async function cacheTenantData(plot, tenants) {
-    try {
-        const db = await initDB();
-        const tx = db.transaction('tenants', 'readwrite');
-        const store = tx.objectStore('tenants');
-        
-        // Store with timestamp
-        const cacheData = {
-            data: tenants,
-            timestamp: Date.now()
-        };
-        
-        await store.put(cacheData, plot);
-    } catch (error) {
-        console.error('Error caching tenant data:', error);
-    }
-}
-
-// Get cached tenant data
-async function getCachedTenantData(plot) {
-    try {
-        const db = await initDB();
-        const tx = db.transaction('tenants', 'readonly');
-        const store = tx.objectStore('tenants');
-        const cacheData = await store.get(plot);
-        
-        if (cacheData && (Date.now() - cacheData.timestamp) < CACHE_CONFIG.TENANT_CACHE_DURATION) {
-            return cacheData.data;
-        }
-        return null;
-    } catch (error) {
-        console.error('Error getting cached tenant data:', error);
-        return null;
-    }
-}
-
-// Modified loadTenantsFromFirebase to use caching
+// Load tenants from Firestore
 async function loadTenantsFromFirebase() {
     const currentPlot = getCurrentPlot();
-    
     try {
-        // Try to get cached data first
-        const cachedData = await getCachedTenantData(currentPlot);
-        if (cachedData) {
-            displayTenants(cachedData);
-            updateTenantSelect(cachedData);
-            updateDashboardStats();
-        }
-        
-        // Fetch fresh data from Firebase
         const snapshot = await db.collection('tenants')
             .where('plotName', '==', currentPlot)
             .get();
             
         const tenants = [];
         snapshot.forEach(doc => {
-            const data = doc.data();
-            data.id = doc.id;
-            tenants.push(data);
+            tenants.push(doc.data());
         });
         
-        // Cache the fresh data
-        await cacheTenantData(currentPlot, tenants);
+        // Always update localStorage with Firebase data
+        const plotKey = getPlotStorageKey(currentPlot);
+        localStorage.setItem(plotKey, JSON.stringify(tenants));
         
-        // Update UI with fresh data
+        // Apply search filter if exists
         const filteredTenants = currentSearchTerm ? tenants.filter(tenant => 
             tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
             tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
@@ -202,23 +123,24 @@ async function loadTenantsFromFirebase() {
         return tenants;
     } catch (error) {
         console.error('Error loading from Firestore:', error);
-        // If Firebase fails, try to use cached data
-        const cachedData = await getCachedTenantData(currentPlot);
-        if (cachedData) {
-            displayTenants(cachedData);
-            updateTenantSelect(cachedData);
-            updateDashboardStats();
-            return cachedData;
-        }
-        throw error;
+        throw error; // Propagate error for proper fallback
     }
 }
 
 // Load tenants from localStorage
 function loadTenants() {
     const currentPlot = getCurrentPlot();
+    console.log('Loading tenants for plot:', currentPlot);
     const plotKey = getPlotStorageKey(currentPlot);
+    
+    // Initialize the plot data if it doesn't exist
+    if (!localStorage.getItem(plotKey)) {
+        console.log('Initializing new plot data for:', currentPlot);
+        localStorage.setItem(plotKey, JSON.stringify([]));
+    }
+    
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    console.log('Loaded tenants:', tenants);
     
     // Apply search filter if exists
     const filteredTenants = currentSearchTerm ? tenants.filter(tenant => 
@@ -226,8 +148,21 @@ function loadTenants() {
         tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
     ) : tenants;
     
-    displayTenants(filteredTenants);
+    // Display the tenants
+    const tenantsList = document.getElementById('tenants-list');
+    if (tenantsList) {
+        if (filteredTenants.length === 0) {
+            tenantsList.innerHTML = '<div class="no-tenants">No tenants found for this plot.</div>';
+        } else {
+            tenantsList.innerHTML = filteredTenants.map(tenant => createTenantCard(tenant)).join('');
+        }
+    }
+    
+    // Update tenant select dropdown
     updateTenantSelect(tenants);
+    
+    // Update dashboard stats
+    updateDashboardStats();
 }
 
 // Initialize navigation
@@ -285,23 +220,33 @@ function initializePlotTabs() {
             // Add active class to clicked tab
             tab.classList.add('active');
             
+            // Get the selected plot
+            const selectedPlot = tab.getAttribute('data-plot');
+            console.log('Switching to plot:', selectedPlot);
+            
+            // Load data for the selected plot
             try {
-                // Load tenants for selected plot
+                // Try to load from Firebase first
                 await loadTenantsFromFirebase();
-                updateDashboardStats();
-                // Refresh payment history if it's currently visible
-                if (document.getElementById('payment-history').style.display === 'block') {
-                    loadPaymentHistory();
-                }
             } catch (error) {
-                console.error('Error loading plot data:', error);
-                // Fallback to local data if Firebase fails
-                const currentPlot = getCurrentPlot();
-                const plotKey = getPlotStorageKey(currentPlot);
-                const localTenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-                displayTenants(localTenants);
-                updateTenantSelect(localTenants);
-                updateDashboardStats();
+                console.error('Error loading from Firebase:', error);
+                // Fall back to localStorage
+                loadTenants();
+            }
+            
+            // Update dashboard stats
+            updateDashboardStats();
+            
+            // Refresh payment history if it's currently visible
+            if (document.getElementById('payment-history').style.display === 'block') {
+                loadPaymentHistory();
+            }
+            
+            // Ensure the tenants section is visible and data is displayed
+            const tenantsSection = document.getElementById('tenants');
+            if (tenantsSection) {
+                tenantsSection.style.display = 'block';
+                loadTenants();
             }
         });
     });
@@ -346,7 +291,8 @@ const DEFAULT_ELECTRICITY_RATE = 10;
 
 // Utility Functions
 function getCurrentPlot() {
-    return document.querySelector('.plot-tab.active').getAttribute('data-plot');
+    const activeTab = document.querySelector('.plot-tab.active');
+    return activeTab ? activeTab.getAttribute('data-plot') : 'home';
 }
 
 function getPlotStorageKey(plot) {
@@ -1685,72 +1631,3 @@ async function handleDataSync() {
         syncBtn.disabled = false;
     }
 }
-
-// Store offline changes
-async function storeOfflineChange(change) {
-    try {
-        const db = await initDB();
-        const tx = db.transaction('offlineChanges', 'readwrite');
-        const store = tx.objectStore('offlineChanges');
-        await store.add(change);
-        
-        // Register for background sync
-        if ('serviceWorker' in navigator && 'SyncManager' in window) {
-            const registration = await navigator.serviceWorker.ready;
-            await registration.sync.register('sync-tenant-data');
-        }
-    } catch (error) {
-        console.error('Error storing offline change:', error);
-    }
-}
-
-// Modified addTenant function to support offline mode
-async function addTenant(tenantData) {
-    try {
-        // Try to add to Firebase first
-        const docRef = await db.collection('tenants').add(tenantData);
-        tenantData.id = docRef.id;
-        
-        // Update local storage and cache
-        const plotKey = getPlotStorageKey(getCurrentPlot());
-        const currentTenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-        currentTenants.push(tenantData);
-        localStorage.setItem(plotKey, JSON.stringify(currentTenants));
-        
-        await cacheTenantData(getCurrentPlot(), currentTenants);
-        
-        return tenantData;
-    } catch (error) {
-        console.error('Error adding tenant:', error);
-        
-        // If offline, store change for later sync
-        if (!navigator.onLine) {
-            await storeOfflineChange({
-                type: 'add',
-                data: tenantData,
-                timestamp: Date.now()
-            });
-            
-            // Update local storage
-            const plotKey = getPlotStorageKey(getCurrentPlot());
-            const currentTenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-            currentTenants.push(tenantData);
-            localStorage.setItem(plotKey, JSON.stringify(currentTenants));
-            
-            return tenantData;
-        }
-        
-        throw error;
-    }
-}
-
-// Initialize caching when the app starts
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await initDB();
-        // Load initial data
-        await loadTenantsFromFirebase();
-    } catch (error) {
-        console.error('Error initializing app:', error);
-    }
-});
