@@ -226,14 +226,21 @@ function initializePlotTabs() {
             const selectedPlot = tab.getAttribute('data-plot');
             console.log('Switching to plot:', selectedPlot);
             
-            // Load data for the selected plot
+            // Show loading state
+            const tenantsList = document.getElementById('tenants-list');
+            if (tenantsList) {
+                tenantsList.innerHTML = '<div class="loading">Loading tenants...</div>';
+            }
+            
+            // Load from localStorage first (instant)
+            loadTenants();
+            
+            // Then sync with Firebase in the background
             try {
-                // Try to load from Firebase first
                 await loadTenantsFromFirebase();
             } catch (error) {
                 console.error('Error loading from Firebase:', error);
-                // Fall back to localStorage
-                loadTenants();
+                // No need to do anything here as we already have data from localStorage
             }
             
             // Update dashboard stats
