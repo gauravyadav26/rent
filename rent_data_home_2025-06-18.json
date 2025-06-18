@@ -1,37 +1,38 @@
 [
   {
-    "lastElectricityDue": 0,
-    "previousDue": 290,
+    "startingDue": 10,
+    "plotName": "home",
     "electricityReadings": [
       {
-        "reading": 88,
-        "date": "2025-06-10"
+        "date": "2025-06-10",
+        "reading": 88
       },
       {
-        "reading": 167,
-        "date": "2025-06-13"
+        "date": "2025-06-13",
+        "reading": 167
       }
     ],
     "advancePaid": 0,
-    "id": 1749568002358,
-    "electricityRate": 10,
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
-    "endDate": null,
-    "plotName": "home",
     "roomNumber": "1",
-    "startingDue": 10,
+    "previousDue": 290,
+    "lastUpdated": "2025-06-18T06:41:43.326Z",
+    "id": 1749568002358,
+    "lastElectricityDue": 0,
+    "tenantName": "Aarif",
+    "isActive": true,
+    "monthlyRent": 3500,
     "paymentHistory": [
       {
         "amount": 4000,
         "date": "2025-06-13"
       }
     ],
-    "isActive": true,
-    "startDate": "2025-06-01",
-    "tenantName": "Aarif",
-    "monthlyRent": 3500
+    "electricityRate": 10,
+    "endDate": null,
+    "startDate": "2025-06-01"
   },
   {
+    "previousDue": 3420,
     "electricityReadings": [
       {
         "reading": 1198,
@@ -42,156 +43,165 @@
         "date": "2025-06-10"
       }
     ],
+    "isActive": true,
+    "plotName": "home",
     "electricityRate": 10,
-    "roomNumber": "2",
-    "id": 1749576400881,
-    "startingDue": 80,
     "endDate": null,
+    "lastUpdated": "2025-06-18T06:41:43.326Z",
+    "roomNumber": "2",
+    "monthlyRent": 3500,
+    "tenantName": "Taslim",
+    "id": 1749576400881,
+    "startDate": "2025-06-01",
+    "lastElectricityDue": 0,
+    "advancePaid": 0,
+    "startingDue": 80,
     "paymentHistory": [
       {
         "date": "2025-06-04",
         "amount": 4500
       }
-    ],
-    "tenantName": "Taslim",
-    "previousDue": 3420,
-    "advancePaid": 0,
-    "lastElectricityDue": 0,
-    "startDate": "2025-06-01",
-    "plotName": "home",
-    "isActive": true,
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
-    "monthlyRent": 3500
+    ]
   },
   {
-    "isActive": true,
-    "paymentHistory": [
-      {
-        "amount": 5000,
-        "date": "2025-06-14"
-      }
-    ],
-    "plotName": "home",
-    "startDate": "2025-06-01",
-    "id": 1749577401777,
-    "previousDue": 5080,
     "tenantName": "Surjan",
+    "previousDue": 5080,
     "startingDue": 0,
-    "lastElectricityDue": 0,
-    "advancePaid": 4000,
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
-    "electricityRate": 10,
+    "id": 1749577401777,
     "electricityReadings": [
       {
-        "date": "2025-06-10",
-        "reading": 2665
+        "reading": 2665,
+        "date": "2025-06-10"
       },
       {
-        "reading": 2823,
-        "date": "2025-06-14"
+        "date": "2025-06-14",
+        "reading": 2823
       }
     ],
+    "endDate": null,
+    "lastElectricityDue": 0,
+    "isActive": true,
     "roomNumber": "3",
+    "electricityRate": 10,
+    "plotName": "home",
+    "lastUpdated": "2025-06-18T06:41:43.326Z",
     "monthlyRent": 3500,
-    "endDate": null
+    "startDate": "2025-06-01",
+    "paymentHistory": [
+      {
+        "date": "2025-06-14",
+        "amount": 5000
+      }
+    ],
+    "advancePaid": 4000
   },
   {
     "tenantName": "Hanif",
-    "id": 1749580685571,
-    "startingDue": 12360,
-    "startDate": "2025-06-01",
-    "advancePaid": 0,
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
-    "isActive": true,
-    "endDate": null,
-    "lastElectricityDue": 0,
     "roomNumber": "5",
-    "monthlyRent": 3500,
+    "isActive": true,
+    "startingDue": 12360,
+    "id": 1749580685571,
     "electricityRate": 10,
-    "previousDue": -3500,
+    "lastUpdated": "2025-06-18T06:41:43.326Z",
     "electricityReadings": [
       {
-        "date": "2025-06-10",
-        "reading": 2225
+        "reading": 2225,
+        "date": "2025-06-10"
       }
     ],
-    "plotName": "home",
+    "endDate": null,
+    "lastElectricityDue": 0,
+    "advancePaid": 0,
+    "previousDue": -3500,
     "paymentHistory": [
       {
         "date": "2025-06-08",
         "amount": 4500
       }
-    ]
+    ],
+    "monthlyRent": 3500,
+    "plotName": "home",
+    "startDate": "2025-06-01"
   },
   {
-    "startDate": "2025-06-01",
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
+    "id": 1749589531704,
+    "lastElectricityDue": 0,
+    "isActive": true,
+    "tenantName": "Azhar",
+    "electricityRate": 10,
+    "startingDue": 7000,
     "paymentHistory": [
       {
-        "date": "2025-06-11",
-        "amount": 5500
+        "amount": 5500,
+        "date": "2025-06-11"
       }
     ],
-    "tenantName": "Azhar",
-    "previousDue": 0,
-    "lastElectricityDue": 0,
-    "id": 1749589531704,
     "plotName": "home",
-    "startingDue": 7000,
-    "isActive": true,
+    "roomNumber": "6",
+    "previousDue": 0,
+    "lastUpdated": "2025-06-18T06:41:43.326Z",
     "monthlyRent": 3500,
     "advancePaid": 0,
-    "roomNumber": "6",
+    "endDate": null,
     "electricityReadings": [
       {
-        "reading": 848,
-        "date": "2025-06-10"
+        "date": "2025-06-10",
+        "reading": 848
       },
       {
         "date": "2025-06-11",
         "reading": 966
       }
     ],
-    "endDate": null,
-    "electricityRate": 10
+    "startDate": "2025-06-01"
   },
   {
+    "id": 1749590114125,
     "electricityReadings": [
       {
-        "date": "2025-06-10",
-        "reading": 1221
-      }
-    ],
-    "startingDue": 3520,
-    "electricityRate": 10,
-    "monthlyRent": 3500,
-    "id": 1749590114125,
-    "paymentHistory": [
-      {
-        "amount": 7000,
-        "date": "2025-06-18"
+        "reading": 1221,
+        "date": "2025-06-10"
       }
     ],
     "lastElectricityDue": 0,
-    "tenantName": "Ratan",
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
+    "paymentHistory": [
+      {
+        "date": "2025-06-18",
+        "amount": 7000
+      }
+    ],
     "advancePaid": 0,
-    "plotName": "home",
     "roomNumber": "7",
+    "startingDue": 3520,
+    "electricityRate": 10,
     "startDate": "2025-06-01",
-    "isActive": true,
     "previousDue": 0,
-    "endDate": null
+    "tenantName": "Ratan",
+    "plotName": "home",
+    "isActive": true,
+    "monthlyRent": 3500,
+    "endDate": null,
+    "lastUpdated": "2025-06-18T06:41:43.326Z"
   },
   {
-    "plotName": "home",
-    "lastUpdated": "2025-06-18T06:41:43.326Z",
-    "roomNumber": "8",
-    "monthlyRent": 3500,
-    "startingDue": 3120,
-    "advancePaid": 0,
-    "startDate": "2025-06-01",
+    "id": 1749590492642,
+    "lastElectricityDue": 0,
+    "tenantName": "Pratap",
+    "isActive": true,
     "electricityRate": 10,
+    "startingDue": 3120,
+    "paymentHistory": [
+      {
+        "amount": 4000,
+        "date": "2025-06-11"
+      }
+    ],
+    "plotName": "home",
+    "roomNumber": "8",
+    "lastUpdated": "2025-06-18T06:41:43.326Z",
+    "previousDue": 5540,
+    "monthlyRent": 3500,
+    "advancePaid": 0,
     "electricityReadings": [
       {
         "date": "2025-06-10",
@@ -202,138 +212,143 @@
         "date": "2025-06-11"
       }
     ],
-    "lastElectricityDue": 0,
-    "previousDue": 5540,
-    "id": 1749590492642,
-    "tenantName": "Pratap",
-    "paymentHistory": [
-      {
-        "amount": 4000,
-        "date": "2025-06-11"
-      }
-    ],
     "endDate": null,
-    "isActive": true
+    "startDate": "2025-06-01"
   },
   {
-    "monthlyRent": 3500,
-    "lastUpdated": "2025-06-18T06:41:43.327Z",
-    "roomNumber": "9",
-    "startDate": "2025-06-01",
-    "startingDue": 70,
-    "paymentHistory": [],
-    "plotName": "home",
-    "previousDue": 0,
-    "electricityReadings": [
-      {
-        "reading": 833,
-        "date": "2025-06-10"
-      }
-    ],
-    "isActive": true,
-    "id": 1749590820500,
-    "tenantName": "Nipin",
-    "advancePaid": 0,
     "electricityRate": 10,
-    "lastElectricityDue": 0
-  },
-  {
+    "isActive": true,
+    "lastUpdated": "2025-06-18T06:41:43.327Z",
     "monthlyRent": 3500,
+    "tenantName": "Nipin",
+    "plotName": "home",
+    "advancePaid": 0,
     "paymentHistory": [
       {
-        "amount": 4100,
-        "date": "2025-06-10"
+        "amount": 3880,
+        "date": "2025-06-18"
       }
     ],
-    "advancePaid": 0,
+    "previousDue": 0,
+    "roomNumber": "9",
+    "startingDue": 70,
+    "lastElectricityDue": 0,
+    "startDate": "2025-06-01",
+    "id": 1749590820500,
     "electricityReadings": [
-      {
-        "reading": 910,
-        "date": "2025-06-10"
-      },
       {
         "date": "2025-06-10",
-        "reading": 970
+        "reading": 833
+      },
+      {
+        "reading": 868,
+        "date": "2025-06-18"
       }
-    ],
-    "isActive": true,
-    "lastElectricityDue": 0,
-    "startDate": "2025-06-01",
-    "id": 1749590896597,
-    "startingDue": 0,
-    "roomNumber": "10",
-    "plotName": "home",
-    "previousDue": 0,
-    "tenantName": "Rakhesh Nipin",
-    "lastUpdated": "2025-06-18T06:41:43.327Z",
-    "electricityRate": 10
+    ]
   },
   {
-    "startingDue": 2960,
-    "tenantName": "Babulal Sala",
-    "electricityRate": 10,
+    "tenantName": "Rakhesh Nipin",
     "monthlyRent": 3500,
+    "previousDue": 0,
+    "id": 1749590896597,
+    "paymentHistory": [
+      {
+        "date": "2025-06-10",
+        "amount": 4100
+      }
+    ],
+    "electricityReadings": [
+      {
+        "date": "2025-06-10",
+        "reading": 910
+      },
+      {
+        "reading": 970,
+        "date": "2025-06-10"
+      }
+    ],
+    "roomNumber": "10",
+    "startingDue": 0,
+    "isActive": true,
+    "lastUpdated": "2025-06-18T06:41:43.327Z",
+    "plotName": "home",
+    "lastElectricityDue": 0,
+    "electricityRate": 10,
+    "advancePaid": 0,
+    "startDate": "2025-06-01"
+  },
+  {
     "paymentHistory": [
       {
         "amount": 4500,
         "date": "2025-06-10"
       }
     ],
-    "advancePaid": 0,
-    "plotName": "home",
-    "roomNumber": "11",
     "id": 1749591043369,
-    "isActive": true,
-    "electricityReadings": [
-      {
-        "reading": 659,
-        "date": "2025-06-10"
-      },
-      {
-        "reading": 702,
-        "date": "2025-06-10"
-      }
-    ],
-    "lastUpdated": "2025-06-18T06:41:43.327Z",
-    "lastElectricityDue": 0,
-    "previousDue": 0,
-    "startDate": "2025-06-01"
-  },
-  {
-    "id": 1749591226754,
     "startDate": "2025-06-01",
-    "isActive": true,
-    "electricityRate": 10,
-    "lastElectricityDue": 0,
-    "paymentHistory": [],
     "electricityReadings": [
       {
         "date": "2025-06-10",
-        "reading": 692
+        "reading": 659
+      },
+      {
+        "date": "2025-06-10",
+        "reading": 702
       }
     ],
-    "previousDue": 0,
-    "tenantName": "Naresh",
-    "startingDue": 2670,
-    "monthlyRent": 3500,
+    "roomNumber": "11",
+    "electricityRate": 10,
     "lastUpdated": "2025-06-18T06:41:43.327Z",
+    "monthlyRent": 3500,
+    "lastElectricityDue": 0,
+    "tenantName": "Babulal Sala",
     "plotName": "home",
-    "roomNumber": "12",
+    "previousDue": 0,
+    "isActive": true,
+    "startingDue": 2960,
     "advancePaid": 0
   },
   {
+    "startingDue": 2670,
     "plotName": "home",
-    "startingDue": 2430,
-    "roomNumber": "14",
-    "isActive": true,
     "electricityRate": 10,
-    "paymentHistory": [],
-    "lastUpdated": "2025-06-18T06:41:43.327Z",
-    "endDate": null,
-    "lastElectricityDue": 0,
-    "id": 1749591279865,
-    "tenantName": "Pratap Bhai",
+    "roomNumber": "12",
     "monthlyRent": 3500,
+    "paymentHistory": [
+      {
+        "amount": 4500,
+        "date": "2025-06-18"
+      }
+    ],
+    "advancePaid": 0,
+    "id": 1749591226754,
+    "lastUpdated": "2025-06-18T06:41:43.327Z",
+    "electricityReadings": [
+      {
+        "reading": 692,
+        "date": "2025-06-10"
+      },
+      {
+        "reading": 792,
+        "date": "2025-06-18"
+      }
+    ],
+    "startDate": "2025-06-01",
+    "previousDue": 0,
+    "tenantName": "Naresh",
+    "lastElectricityDue": 0,
+    "isActive": true
+  },
+  {
+    "startDate": "2025-06-01",
+    "plotName": "home",
+    "endDate": null,
+    "advancePaid": 0,
+    "startingDue": 2430,
+    "tenantName": "Pratap Bhai",
+    "roomNumber": "14",
+    "electricityRate": 10,
+    "previousDue": 4360,
     "electricityReadings": [
       {
         "date": "2025-06-10",
@@ -344,71 +359,88 @@
         "reading": 255
       }
     ],
-    "advancePaid": 0,
-    "startDate": "2025-06-01",
-    "previousDue": 4360
+    "id": 1749591279865,
+    "lastUpdated": "2025-06-18T06:41:43.327Z",
+    "paymentHistory": [],
+    "monthlyRent": 3500,
+    "isActive": true,
+    "lastElectricityDue": 0
   },
   {
-    "startingDue": 1100,
-    "endDate": null,
-    "plotName": "home",
-    "advancePaid": 0,
-    "monthlyRent": 3500,
-    "startDate": "2025-06-01",
-    "roomNumber": "13",
-    "tenantName": "Surjan Dad",
-    "id": 1749591362556,
     "lastUpdated": "2025-06-18T06:41:43.327Z",
+    "monthlyRent": 3500,
+    "roomNumber": "13",
+    "previousDue": 3630,
+    "advancePaid": 0,
+    "plotName": "home",
+    "endDate": "2025-06-17",
     "electricityRate": 10,
+    "id": 1749591362556,
+    "startDate": "2025-06-01",
     "paymentHistory": [
       {
-        "amount": 4300,
-        "date": "2025-06-14"
+        "date": "2025-06-14",
+        "amount": 4300
       }
     ],
+    "startingDue": 2800,
     "isActive": true,
-    "lastElectricityDue": 0,
+    "tenantName": "Surjan Dad",
     "electricityReadings": [
       {
         "reading": 892,
         "date": "2025-06-10"
       },
       {
-        "date": "2025-06-14",
-        "reading": 982
-      }
-    ],
-    "previousDue": 100
-  },
-  {
-    "lastUpdated": "2025-06-18T06:41:43.327Z",
-    "roomNumber": "15",
-    "startDate": "2025-06-01",
-    "lastElectricityDue": 0,
-    "endDate": null,
-    "paymentHistory": [],
-    "monthlyRent": 3500,
-    "startingDue": 0,
-    "previousDue": 4120,
-    "tenantName": "Nipin 2nd Son",
-    "electricityRate": 10,
-    "electricityReadings": [
-      {
-        "date": "2025-06-10",
-        "reading": 56
+        "reading": 982,
+        "date": "2025-06-14"
       },
       {
-        "date": "2025-06-14",
-        "reading": 118
+        "date": "2025-06-18",
+        "reading": 995
       }
     ],
-    "plotName": "home",
-    "isActive": true,
+    "lastElectricityDue": 0
+  },
+  {
+    "electricityRate": 10,
+    "advancePaid": 0,
+    "startDate": "2025-06-01",
+    "paymentHistory": [
+      {
+        "amount": 4120,
+        "date": "2025-06-18"
+      }
+    ],
+    "endDate": null,
+    "tenantName": "Nipin 2nd Son",
+    "previousDue": 0,
+    "electricityReadings": [
+      {
+        "reading": 56,
+        "date": "2025-06-10"
+      },
+      {
+        "reading": 118,
+        "date": "2025-06-14"
+      }
+    ],
+    "lastUpdated": "2025-06-18T06:41:43.327Z",
+    "monthlyRent": 3500,
     "id": 1749591431466,
-    "advancePaid": 0
+    "plotName": "home",
+    "startingDue": 0,
+    "roomNumber": "15",
+    "lastElectricityDue": 0,
+    "isActive": true
   },
   {
     "monthlyRent": 3500,
+    "id": 1749591519013,
+    "plotName": "home",
+    "startDate": "2025-04-06",
+    "endDate": null,
+    "lastUpdated": "2025-06-18T06:41:43.327Z",
     "paymentHistory": [
       {
         "amount": 1500,
@@ -423,15 +455,10 @@
         "date": "2025-06-11"
       }
     ],
-    "tenantName": "New Mistri",
-    "id": 1749591519013,
     "isActive": true,
-    "lastElectricityDue": 0,
     "advancePaid": 1500,
-    "roomNumber": "16",
-    "previousDue": 0,
-    "startDate": "2025-04-06",
-    "endDate": null,
+    "tenantName": "New Mistri",
+    "electricityRate": 10,
     "electricityReadings": [
       {
         "reading": 1426,
@@ -442,35 +469,35 @@
         "date": "2025-06-10"
       },
       {
-        "date": "2025-06-11",
-        "reading": 1487
+        "reading": 1487,
+        "date": "2025-06-11"
       }
     ],
-    "electricityRate": 10,
-    "plotName": "home",
-    "startingDue": 0,
-    "lastUpdated": "2025-06-18T06:41:43.327Z"
+    "roomNumber": "16",
+    "previousDue": 0,
+    "lastElectricityDue": 0,
+    "startingDue": 0
   },
   {
+    "startingDue": 0,
     "lastUpdated": "2025-06-18T06:41:43.327Z",
-    "monthlyRent": 3500,
-    "advancePaid": 0,
-    "isActive": true,
+    "plotName": "home",
+    "startDate": "2025-06-01",
+    "paymentHistory": [],
+    "previousDue": 0,
+    "roomNumber": "17",
+    "electricityRate": 10,
     "tenantName": "Suresh",
     "electricityReadings": [
       {
-        "date": "2025-06-10",
-        "reading": 971
+        "reading": 971,
+        "date": "2025-06-10"
       }
     ],
-    "electricityRate": 10,
-    "plotName": "home",
-    "paymentHistory": [],
-    "lastElectricityDue": 0,
-    "startDate": "2025-06-01",
-    "roomNumber": "17",
+    "monthlyRent": 3500,
     "id": 1749591814695,
-    "previousDue": 0,
-    "startingDue": 0
+    "advancePaid": 0,
+    "lastElectricityDue": 0,
+    "isActive": true
   }
 ]
