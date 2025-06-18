@@ -9,10 +9,33 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+async function initializeFirebase() {
+    try {
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        // Initialize Firestore
+        db = firebase.firestore();
+        
+        // Enable offline persistence
+        await db.enablePersistence()
+            .catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                } else if (err.code === 'unimplemented') {
+                    console.warn('The current browser does not support persistence.');
+                }
+            });
+            
+        console.log('Firebase initialized successfully');
+        return true;
+    } catch (error) {
+        console.error('Error initializing Firebase:', error);
+        return false;
+    }
 }
-const db = firebase.firestore();
 
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
@@ -34,51 +57,108 @@ window.addEventListener('appinstalled', () => {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
-    initializeNavigation();
-    initializePlotTabs();
-    initializeTheme();
-    addThemeToggle();
-    addTenantStatusFilter();
-    initializeSidebar();
-
-    // Set tenants tab as active by default
-    const tenantsTab = document.querySelector('.nav-btn[data-section="tenants"]');
-    if (tenantsTab) {
-        tenantsTab.click();
-    }
-
-    // Check Firebase connection first
     try {
-        const isConnected = await checkFirebaseConnection();
-        if (isConnected) {
-            console.log('Firebase is connected');
-            const hasPermissions = await checkFirebaseRules();
-            if (hasPermissions) {
-                console.log('Firebase is ready to sync data');
-                // Load data from Firebase first
-                await loadTenantsFromFirebase();
-                // Set up periodic data refresh
-                setupPeriodicRefresh();
-            } else {
-                console.error('Firebase permissions not properly configured');
-                // Fall back to localStorage
-                loadTenants();
-            }
-        } else {
-            console.error('Firebase connection failed. Loading from localStorage.');
-            // Fall back to localStorage
+        // Initialize navigation first
+        initializeNavigation();
+        
+        // Initialize plot tabs
+        initializePlotTabs();
+        
+        // Initialize Firebase
+        const firebaseInitialized = await initializeFirebase();
+        if (!firebaseInitialized) {
+            throw new Error('Failed to initialize Firebase');
+        }
+        
+        // Show tenants section by default and hide others
+        const sections = document.querySelectorAll('.section');
+        sections.forEach(section => {
+            section.style.display = 'none';
+        });
+        const tenantsSection = document.getElementById('tenants');
+        if (tenantsSection) {
+            tenantsSection.style.display = 'block';
+        }
+        
+        // Set tenants tab as active by default
+        const tenantsTab = document.querySelector('.nav-btn[data-section="tenants"]');
+        if (tenantsTab) {
+            tenantsTab.classList.add('active');
+        }
+        
+        // Get the current plot and tenants list element
+        const currentPlot = document.querySelector('.plot-tab.active')?.dataset.plot || 'home';
+        const tenantsList = document.getElementById('tenants-list');
+        
+        // Show loading state if tenants list exists
+        if (tenantsList) {
+            tenantsList.innerHTML = '<div class="text-center p-4">Loading...</div>';
+        }
+        
+        const plotKey = `tenants_${currentPlot}`;
+        
+        // First try to load from Firebase to ensure we have the latest data
+        try {
+            const snapshot = await getDocs(collection(db, plotKey));
+            const firebaseTenants = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
+            // Get existing localStorage data
+            const localTenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+            
+            // Merge Firebase and localStorage data, prioritizing Firebase data
+            const mergedTenants = mergeTenantData(firebaseTenants, localTenants);
+            
+            // Save merged data to localStorage
+            localStorage.setItem(plotKey, JSON.stringify(mergedTenants));
+            
+            // Display the merged data
+            displayTenants(mergedTenants);
+            updateDashboardStats();
+            
+            // Set up real-time updates
+            const tenantsRef = collection(db, plotKey);
+            onSnapshot(tenantsRef, (snapshot) => {
+                const updatedTenants = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                localStorage.setItem(plotKey, JSON.stringify(updatedTenants));
+                displayTenants(updatedTenants);
+                updateDashboardStats();
+            });
+            
+        } catch (error) {
+            console.error('Error loading from Firebase:', error);
+            // Fall back to localStorage if Firebase fails
             loadTenants();
         }
+        
     } catch (error) {
-        console.error('Error during initialization:', error);
-        // Fall back to localStorage
-        loadTenants();
+        console.error('Error initializing app:', error);
+        const tenantsList = document.getElementById('tenants-list');
+        if (tenantsList) {
+            tenantsList.innerHTML = '<div class="text-center p-4 text-red-500">Error loading data. Please refresh the page.</div>';
+        }
     }
-
-    // Set up event listeners after data is loaded
-    setupEventListeners();
-    updateDashboardStats();
 });
+
+// Helper function to merge tenant data
+function mergeTenantData(firebaseTenants, localTenants) {
+    // Create a map of Firebase tenants by ID
+    const firebaseMap = new Map(firebaseTenants.map(tenant => [tenant.id, tenant]));
+    
+    // Create a map of local tenants by ID
+    const localMap = new Map(localTenants.map(tenant => [tenant.id, tenant]));
+    
+    // Merge the data, prioritizing Firebase data
+    const mergedMap = new Map([...localMap, ...firebaseMap]);
+    
+    // Convert back to array
+    return Array.from(mergedMap.values());
+}
 
 // Set up periodic data refresh
 function setupPeriodicRefresh() {
@@ -129,96 +209,77 @@ async function loadTenantsFromFirebase() {
 
 // Load tenants from localStorage
 function loadTenants() {
-    const currentPlot = getCurrentPlot();
-    console.log('Loading tenants for plot:', currentPlot);
-    const plotKey = getPlotStorageKey(currentPlot);
+    const currentPlot = document.querySelector('.plot-tab.active')?.dataset.plot || 'home';
+    const plotKey = `tenants_${currentPlot}`;
     
-    // Initialize the plot data if it doesn't exist
-    if (!localStorage.getItem(plotKey)) {
-        console.log('Initializing new plot data for:', currentPlot);
-        localStorage.setItem(plotKey, JSON.stringify([]));
+    // Get search query
+    const searchInput = document.getElementById('search-tenant');
+    const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    // Load tenants from localStorage
+    let tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    
+    // Initialize plot data if it doesn't exist
+    if (!tenants) {
+        tenants = [];
+        localStorage.setItem(plotKey, JSON.stringify(tenants));
     }
     
-    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    console.log('Loaded tenants:', tenants);
-    
     // Ensure each tenant has an ID
-    const validTenants = tenants.map(tenant => ({
+    tenants = tenants.map(tenant => ({
         ...tenant,
-        id: tenant.id || Date.now().toString(),
-        plotName: tenant.plotName || currentPlot
+        id: tenant.id || generateUniqueId()
     }));
     
     // Save back to localStorage if any IDs were added
-    if (validTenants.length !== tenants.length) {
-        localStorage.setItem(plotKey, JSON.stringify(validTenants));
-    }
+    localStorage.setItem(plotKey, JSON.stringify(tenants));
     
-    // Apply search filter if exists
-    const filteredTenants = currentSearchTerm ? validTenants.filter(tenant => 
-        tenant.tenantName?.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
-        tenant.roomNumber?.toLowerCase().includes(currentSearchTerm.toLowerCase())
-    ) : validTenants;
+    // Filter tenants based on search query
+    const filteredTenants = tenants.filter(tenant => {
+        const name = (tenant.tenantName || '').toLowerCase();
+        const room = (tenant.roomNumber || '').toLowerCase();
+        return name.includes(searchQuery) || room.includes(searchQuery);
+    });
     
-    // Display the tenants
-    const tenantsList = document.getElementById('tenants-list');
-    if (tenantsList) {
-        if (filteredTenants.length === 0) {
-            tenantsList.innerHTML = '<div class="no-tenants">No tenants found for this plot.</div>';
-        } else {
-            tenantsList.innerHTML = filteredTenants.map(tenant => createTenantCard(tenant)).join('');
-        }
-    }
-    
-    // Update tenant select dropdown
-    updateTenantSelect(validTenants);
+    // Display tenants
+    displayTenants(filteredTenants);
     
     // Update dashboard stats
     updateDashboardStats();
+    
+    // If payment history is visible, refresh it
+    const paymentHistorySection = document.getElementById('payment-history');
+    if (paymentHistorySection && paymentHistorySection.style.display === 'block') {
+        refreshPaymentHistory();
+    }
 }
 
 // Initialize navigation
 function initializeNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
-    const sections = document.querySelectorAll('.section');
-    
     navButtons.forEach(button => {
         button.addEventListener('click', () => {
-            const targetSection = button.getAttribute('data-section');
+            // Remove active class from all buttons
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            button.classList.add('active');
             
             // Hide all sections
+            const sections = document.querySelectorAll('.section');
             sections.forEach(section => {
                 section.style.display = 'none';
             });
             
-            // Show target section
-            document.getElementById(targetSection).style.display = 'block';
-            
-            // Update active state
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            // Load section-specific data
-            if (targetSection === 'payment-history') {
-                loadPaymentHistory();
-            } else if (targetSection === 'tenants') {
-                loadTenants();
-            } else if (targetSection === 'monthly-history') {
-                loadMonthlyHistory();
-            }
-            
-            // Close sidebar on mobile
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                const sidebar = document.querySelector('.sidebar');
-                const contentArea = document.querySelector('.content-area');
-                const sidebarToggle = document.getElementById('sidebar-toggle');
-                const icon = sidebarToggle.querySelector('i');
+            // Show selected section
+            const sectionId = button.getAttribute('data-section');
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.style.display = 'block';
                 
-                sidebar.classList.remove('active');
-                contentArea.classList.remove('sidebar-active');
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
+                // If switching to tenants section, reload tenants
+                if (sectionId === 'tenants') {
+                    loadTenants();
+                }
             }
         });
     });
@@ -230,43 +291,45 @@ function initializePlotTabs() {
     plotTabs.forEach(tab => {
         tab.addEventListener('click', async () => {
             // Remove active class from all tabs
-            document.querySelectorAll('.plot-tab').forEach(t => t.classList.remove('active'));
+            plotTabs.forEach(t => t.classList.remove('active'));
             // Add active class to clicked tab
             tab.classList.add('active');
             
             // Get the selected plot
             const selectedPlot = tab.getAttribute('data-plot');
-            console.log('Switching to plot:', selectedPlot);
             
             // Show loading state
             const tenantsList = document.getElementById('tenants-list');
             if (tenantsList) {
-                tenantsList.innerHTML = '<div class="loading">Loading tenants...</div>';
+                tenantsList.innerHTML = '<div class="text-center p-4">Loading...</div>';
             }
             
-            // Load from localStorage first (instant)
-            loadTenants();
+            const plotKey = `tenants_${selectedPlot}`;
             
-            // Then sync with Firebase in the background
             try {
-                await loadTenantsFromFirebase();
+                // Try to load from Firebase first
+                const snapshot = await getDocs(collection(db, plotKey));
+                const firebaseTenants = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                // Get existing localStorage data
+                const localTenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+                
+                // Merge Firebase and localStorage data
+                const mergedTenants = mergeTenantData(firebaseTenants, localTenants);
+                
+                // Save merged data to localStorage
+                localStorage.setItem(plotKey, JSON.stringify(mergedTenants));
+                
+                // Display the merged data
+                displayTenants(mergedTenants);
+                updateDashboardStats();
+                
             } catch (error) {
                 console.error('Error loading from Firebase:', error);
-                // No need to do anything here as we already have data from localStorage
-            }
-            
-            // Update dashboard stats
-            updateDashboardStats();
-            
-            // Refresh payment history if it's currently visible
-            if (document.getElementById('payment-history').style.display === 'block') {
-                loadPaymentHistory();
-            }
-            
-            // Only show tenants if the tenants section is active
-            const tenantsSection = document.getElementById('tenants');
-            const isTenantsSectionActive = tenantsSection && tenantsSection.style.display === 'block';
-            if (isTenantsSectionActive) {
+                // Fall back to localStorage
                 loadTenants();
             }
         });
@@ -452,110 +515,96 @@ async function handleDataImport(event) {
 }
 
 // Display Functions
-function createTenantCard(tenant) {
-    if (!tenant) {
-        console.error('Invalid tenant data:', tenant);
-        return '<div class="tenant-card error">Invalid tenant data</div>';
+function displayTenants(tenants) {
+    const tenantsList = document.getElementById('tenants-list');
+    if (!tenantsList) {
+        console.error('Tenants list element not found');
+        return;
     }
+    
+    if (!tenants || tenants.length === 0) {
+        tenantsList.innerHTML = '<div class="text-center p-4">No tenants found for this plot.</div>';
+        return;
+    }
+    
+    // Create tenant cards
+    const tenantCards = tenants.map(tenant => {
+        // Calculate total due on the fly
+        const totalDue = calculateTotalDue(tenant);
+        
+        // Ensure tenant has all required fields
+        const safeTenant = {
+            id: tenant.id || generateUniqueId(),
+            tenantName: tenant.tenantName || 'Unknown Tenant',
+            roomNumber: tenant.roomNumber || 'N/A',
+            startDate: tenant.startDate || new Date().toISOString().split('T')[0],
+            monthlyRent: parseFloat(tenant.monthlyRent) || 0,
+            advancePaid: parseFloat(tenant.advancePaid) || 0,
+            electricityRate: parseFloat(tenant.electricityRate) || DEFAULT_ELECTRICITY_RATE,
+            electricityReadings: tenant.electricityReadings || [],
+            paymentHistory: tenant.paymentHistory || [],
+            previousDue: parseFloat(tenant.previousDue) || 0,
+            endDate: tenant.endDate || null,
+            totalDue: totalDue // Add calculated total due
+        };
+        
+        return createTenantCard(safeTenant);
+    }).join('');
+    
+    // Update the list
+    tenantsList.innerHTML = tenantCards;
+    
+    // Update tenant select dropdown
+    updateTenantSelect(tenants);
+}
 
-    // Ensure all required fields exist with defaults
-    const safeTenant = {
-        id: tenant.id || Date.now().toString(),
-        tenantName: tenant.tenantName || 'Unknown Tenant',
-        roomNumber: tenant.roomNumber || 'N/A',
-        startDate: tenant.startDate || new Date().toISOString().split('T')[0],
-        monthlyRent: parseFloat(tenant.monthlyRent) || 0,
-        advancePaid: parseFloat(tenant.advancePaid) || 0,
-        electricityRate: parseFloat(tenant.electricityRate) || DEFAULT_ELECTRICITY_RATE,
-        electricityReadings: Array.isArray(tenant.electricityReadings) ? tenant.electricityReadings : [],
-        paymentHistory: Array.isArray(tenant.paymentHistory) ? tenant.paymentHistory : [],
-        previousDue: parseFloat(tenant.previousDue) || 0,
-        endDate: tenant.endDate || null
-    };
+// Calculate total due for a tenant
+function calculateTotalDue(tenant) {
+    if (!tenant) return 0;
+    
+    // Calculate rent due
+    const startDate = new Date(tenant.startDate || new Date());
+    const currentDate = new Date();
+    const monthsDiff = (currentDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                      (currentDate.getMonth() - startDate.getMonth());
+    const totalRentDue = monthsDiff * (parseFloat(tenant.monthlyRent) || 0);
+    
+    // Calculate electricity due
+    const totalElectricityDue = (tenant.electricityReadings || []).reduce((total, reading) => {
+        return total + (parseFloat(reading.amount) || 0);
+    }, 0);
+    
+    // Calculate total payments
+    const totalPayments = (tenant.paymentHistory || []).reduce((total, payment) => {
+        return total + (parseFloat(payment.amount) || 0);
+    }, 0);
+    
+    // Calculate total due
+    const totalDue = totalRentDue + totalElectricityDue - totalPayments + (parseFloat(tenant.previousDue) || 0);
+    
+    return Math.max(0, totalDue); // Ensure we don't return negative values
+}
 
-    const monthsSinceStart = calculateMonthsDifference(safeTenant.startDate);
-    const currentMonthBill = calculateCurrentMonthBill(safeTenant);
-    const totalElectricityBill = calculateTotalElectricityBill(safeTenant);
-    const previousDue = calculatePreviousDue(safeTenant);
-    const lastPayment = safeTenant.paymentHistory[safeTenant.paymentHistory.length - 1] || { amount: 0, date: 'N/A' };
-    const lastReading = safeTenant.electricityReadings[safeTenant.electricityReadings.length - 1] || { reading: 0, date: 'N/A' };
-    const previousReading = safeTenant.electricityReadings[safeTenant.electricityReadings.length - 2] || { reading: 0, date: 'N/A' };
-    const startReading = safeTenant.electricityReadings[0] || { reading: 0, date: 'N/A' };
-    const currentMonthDue = safeTenant.monthlyRent + currentMonthBill;
-    const isActive = !safeTenant.endDate;
-
+// Create tenant card HTML
+function createTenantCard(tenant) {
+    const totalDue = calculateTotalDue(tenant);
+    const formattedDue = formatCurrency(totalDue);
+    
     return `
-        <div class="tenant-card ${isActive ? 'active-tenant' : 'past-tenant'}">
-            <h3>
-                <i class="fas fa-user"></i> ${safeTenant.tenantName}
-                <span class="room-number">Room ${safeTenant.roomNumber}</span>
-                <span class="tenant-status ${isActive ? 'active' : 'past'}">
-                    ${isActive ? 'Active' : 'Past'}
-                </span>
-            </h3>
-            <div class="tenant-info">
-                <div class="info-section" data-section="basic-info">
-                    <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
-                    <p><strong>Start Date:</strong> ${formatDate(safeTenant.startDate)}</p>
-                    ${safeTenant.endDate ? `<p><strong>End Date:</strong> ${formatDate(safeTenant.endDate)}</p>` : ''}
-                    <p><strong>Months Since Start:</strong> ${monthsSinceStart}</p>
-                    <p><strong>Monthly Rent:</strong> ₹${formatIndianNumber(safeTenant.monthlyRent)}</p>
-                    <p><strong>Advance Paid:</strong> ₹${formatIndianNumber(safeTenant.advancePaid)}</p>
-                </div>
-                
-                <div class="info-section">
-                    <h4><i class="fas fa-money-bill-wave"></i> Payment Information</h4>
-                    <p><strong>Current Month:</strong> ₹${formatIndianNumber(Math.round(currentMonthDue))}</p>
-                    <p><strong>Total Due:</strong> <span class="total-due-amount">₹${formatIndianNumber(Math.round(previousDue || 0))}</span></p>
-                    <p><strong>Last Payment:</strong> ₹${formatIndianNumber(Math.round(lastPayment.amount))} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
-                </div>
-                
-                <div class="info-section" data-section="electricity">
-                    <h4><i class="fas fa-bolt"></i> Electricity Information</h4>
-                    <p>
-                        <strong>Start Reading:</strong> 
-                        ${startReading.reading}
-                        <button onclick="editElectricityReading('${safeTenant.id}', 0)" class="inline-edit-btn" title="Edit Start Reading">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </p>
-                    <p>
-                        <strong>Previous Reading:</strong> 
-                        ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})
-                        ${safeTenant.electricityReadings.length > 1 ? `
-                            <button onclick="editElectricityReading('${safeTenant.id}', ${safeTenant.electricityReadings.length - 2})" class="inline-edit-btn" title="Edit Previous Reading">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        ` : ''}
-                    </p>
-                    <p>
-                        <strong>Latest Reading:</strong> 
-                        ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})
-                        ${safeTenant.electricityReadings.length > 0 ? `
-                            <button onclick="editElectricityReading('${safeTenant.id}', ${safeTenant.electricityReadings.length - 1})" class="inline-edit-btn" title="Edit Latest Reading">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        ` : ''}
-                    </p>
-                    <p><strong>Current Month Bill:</strong> ₹${formatIndianNumber(Math.round(currentMonthBill))}</p>
-                    <p><strong>Total Electricity Bill:</strong> ₹${formatIndianNumber(Math.round(totalElectricityBill))}</p>
-                </div>
+        <div class="tenant-card" data-tenant-id="${tenant.id}">
+            <div class="tenant-header">
+                <h3>${tenant.tenantName}</h3>
+                <span class="room-number">Room ${tenant.roomNumber}</span>
+            </div>
+            <div class="tenant-details">
+                <p><strong>Monthly Rent:</strong> ${formatCurrency(tenant.monthlyRent)}</p>
+                <p><strong>Total Due:</strong> ${formattedDue}</p>
+                <p><strong>Start Date:</strong> ${formatDate(tenant.startDate)}</p>
             </div>
             <div class="tenant-actions">
-                <button onclick="editTenant('${safeTenant.id}')" class="edit-btn">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                ${isActive ? `
-                    <button onclick="addElectricityReading('${safeTenant.id}')" class="submit-btn">
-                        <i class="fas fa-bolt"></i> Add Reading
-                    </button>
-                    <button onclick="recordPayment('${safeTenant.id}')" class="submit-btn">
-                        <i class="fas fa-money-bill-wave"></i> Record Payment
-                    </button>
-                ` : ''}
-                <button onclick="deleteTenant('${safeTenant.id}')" class="delete-btn">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
+                <button onclick="recordPayment('${tenant.id}')" class="btn btn-primary">Record Payment</button>
+                <button onclick="recordElectricityReading('${tenant.id}')" class="btn btn-secondary">Record Reading</button>
+                <button onclick="editTenant('${tenant.id}')" class="btn btn-info">Edit</button>
             </div>
         </div>
     `;
@@ -649,38 +698,6 @@ async function handleTenantFormSubmit(e) {
         console.error('Error adding tenant:', error);
         alert(error.message || 'Error adding tenant. Please try again.');
     }
-}
-
-// Update the display function with improved tenant information
-function displayTenants(tenants) {
-    const tenantsList = document.getElementById('tenants-list');
-    if (!tenantsList) return;
-    
-    tenantsList.innerHTML = '';
-
-    if (!tenants || tenants.length === 0) {
-        tenantsList.innerHTML = '<div class="no-tenants">No tenants found for this plot.</div>';
-        return;
-    }
-
-    // Ensure each tenant has required fields
-    const validTenants = tenants.map(tenant => ({
-        ...tenant,
-        id: tenant.id || Date.now().toString(),
-        tenantName: tenant.tenantName || 'Unknown Tenant',
-        roomNumber: tenant.roomNumber || 'N/A',
-        monthlyRent: tenant.monthlyRent || 0,
-        electricityRate: tenant.electricityRate || DEFAULT_ELECTRICITY_RATE,
-        electricityReadings: tenant.electricityReadings || [],
-        paymentHistory: tenant.paymentHistory || [],
-        previousDue: tenant.previousDue || 0
-    }));
-
-    validTenants.forEach(tenant => {
-        const tenantCard = document.createElement('div');
-        tenantCard.innerHTML = createTenantCard(tenant);
-        tenantsList.appendChild(tenantCard.firstElementChild);
-    });
 }
 
 // Update tenant select dropdown
