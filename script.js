@@ -32,6 +32,43 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
 });
 
+// Migrate tenant IDs to numbers
+async function migrateTenantIds() {
+    console.log('Starting tenant ID migration...');
+    const plots = ['home', 'baba', 'shop', 'others'];
+    
+    for (const plot of plots) {
+        const plotKey = getPlotStorageKey(plot);
+        const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+        let needsUpdate = false;
+        
+        // Check if any tenant has string ID
+        tenants.forEach(tenant => {
+            if (typeof tenant.id === 'string') {
+                tenant.id = Number(tenant.id);
+                needsUpdate = true;
+            }
+        });
+        
+        // Update localStorage if needed
+        if (needsUpdate) {
+            console.log(`Migrating tenant IDs for plot: ${plot}`);
+            localStorage.setItem(plotKey, JSON.stringify(tenants));
+            
+            // Update Firebase if connected
+            try {
+                for (const tenant of tenants) {
+                    await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
+                }
+                console.log(`Successfully migrated tenant IDs for plot: ${plot}`);
+            } catch (error) {
+                console.error(`Error migrating tenant IDs to Firebase for plot ${plot}:`, error);
+            }
+        }
+    }
+    console.log('Tenant ID migration completed');
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
     initializeNavigation();
@@ -46,6 +83,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tenantsTab) {
         tenantsTab.click();
     }
+
+    // Migrate tenant IDs first
+    await migrateTenantIds();
 
     // Check Firebase connection first
     try {
@@ -103,7 +143,10 @@ async function loadTenantsFromFirebase() {
             
         const tenants = [];
         snapshot.forEach(doc => {
-            tenants.push(doc.data());
+            const data = doc.data();
+            // Ensure ID is a number
+            data.id = Number(data.id);
+            tenants.push(data);
         });
         
         // Always update localStorage with Firebase data
@@ -140,6 +183,10 @@ function loadTenants() {
     }
     
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    // Ensure all tenant IDs are numbers
+    tenants.forEach(tenant => {
+        tenant.id = Number(tenant.id);
+    });
     console.log('Loaded tenants:', tenants);
     
     // Apply search filter if exists
@@ -687,7 +734,7 @@ function recordPayment(tenantId) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const tenant = tenants.find(t => t.id === tenantId);
+    const tenant = tenants.find(t => t.id === Number(tenantId));
 
     if (!tenant) {
         alert('Tenant not found');
@@ -762,14 +809,14 @@ async function deleteTenant(tenantId) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const updatedTenants = tenants.filter(t => t.id !== tenantId);
+    const updatedTenants = tenants.filter(t => t.id !== Number(tenantId));
 
     // Save to localStorage
     localStorage.setItem(plotKey, JSON.stringify(updatedTenants));
 
     // Save to Firebase
     try {
-        await db.collection('tenants').doc(tenantId.toString()).delete();
+        await db.collection('tenants').doc(Number(tenantId).toString()).delete();
     } catch (error) {
         console.error('Error deleting from Firebase:', error);
         alert('Error deleting from database. Please try again.');
@@ -884,10 +931,9 @@ async function editPayment(tenantId, paymentIndex) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const tenant = tenants.find(t => t.id === tenantId);
-    const payment = tenant.paymentHistory[paymentIndex];
+    const tenant = tenants.find(t => t.id === Number(tenantId));
 
-    if (!tenant || !payment) {
+    if (!tenant || !tenant.paymentHistory || !tenant.paymentHistory[paymentIndex]) {
         alert('Payment not found');
         return;
     }
@@ -904,11 +950,11 @@ async function editPayment(tenantId, paymentIndex) {
         <h3>Edit Payment</h3>
         <div class="form-group">
             <label for="paymentAmount">Payment Amount</label>
-            <input type="number" id="paymentAmount" required min="0" step="0.01" value="${payment.amount}">
+            <input type="number" id="paymentAmount" required min="0" step="0.01" value="${tenant.paymentHistory[paymentIndex].amount}">
         </div>
         <div class="form-group">
             <label for="paymentDate">Payment Date</label>
-            <input type="date" id="paymentDate" required value="${payment.date}">
+            <input type="date" id="paymentDate" required value="${tenant.paymentHistory[paymentIndex].date}">
         </div>
         <div class="form-actions">
             <button type="submit">Update Payment</button>
@@ -954,7 +1000,7 @@ async function deletePayment(tenantId, paymentIndex) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const tenant = tenants.find(t => t.id === tenantId);
+    const tenant = tenants.find(t => t.id === Number(tenantId));
 
     if (!tenant || !tenant.paymentHistory) {
         alert('Payment not found');
@@ -1022,7 +1068,7 @@ function editTenant(tenantId) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const tenant = tenants.find(t => t.id === tenantId);
+    const tenant = tenants.find(t => t.id === Number(tenantId));
 
     if (!tenant) {
         alert('Tenant not found');
@@ -1241,7 +1287,7 @@ async function addElectricityReading(tenantId) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const tenant = tenants.find(t => t.id === tenantId);
+    const tenant = tenants.find(t => t.id === Number(tenantId));
 
     if (!tenant) {
         alert('Tenant not found');
@@ -1661,14 +1707,19 @@ async function editElectricityReading(tenantId, readingIndex) {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
-    const tenant = tenants.find(t => t.id === tenantId);
-    const reading = tenant.electricityReadings[readingIndex];
+    const tenant = tenants.find(t => t.id === Number(tenantId));
 
-    if (!tenant || !reading) {
+    if (!tenant) {
+        alert('Tenant not found');
+        return;
+    }
+
+    if (!tenant.electricityReadings || !tenant.electricityReadings[readingIndex]) {
         alert('Reading not found');
         return;
     }
 
+    const reading = tenant.electricityReadings[readingIndex];
     const newReading = prompt('Enter new electricity reading:', reading.reading);
     if (newReading === null) return;
 
