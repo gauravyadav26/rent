@@ -1,3 +1,7 @@
+// Import Firebase functions
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getFirestore, collection, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAad_Ix_4Kw7dnwPpRUacXlxOZCG_HuZ-8",
@@ -12,12 +16,10 @@ const firebaseConfig = {
 async function initializeFirebase() {
     try {
         // Initialize Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        const app = initializeApp(firebaseConfig);
         
         // Initialize Firestore
-        db = firebase.firestore();
+        const db = getFirestore(app);
         
         // Enable offline persistence
         await db.enablePersistence()
@@ -30,10 +32,10 @@ async function initializeFirebase() {
             });
             
         console.log('Firebase initialized successfully');
-        return true;
+        return db;
     } catch (error) {
         console.error('Error initializing Firebase:', error);
-        return false;
+        return null;
     }
 }
 
@@ -65,8 +67,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         initializePlotTabs();
         
         // Initialize Firebase
-        const firebaseInitialized = await initializeFirebase();
-        if (!firebaseInitialized) {
+        const db = await initializeFirebase();
+        if (!db) {
             throw new Error('Failed to initialize Firebase');
         }
         
@@ -99,7 +101,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // First try to load from Firebase to ensure we have the latest data
         try {
-            const snapshot = await getDocs(collection(db, plotKey));
+            const tenantsCollection = collection(db, plotKey);
+            const snapshot = await getDocs(tenantsCollection);
             const firebaseTenants = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -119,8 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateDashboardStats();
             
             // Set up real-time updates
-            const tenantsRef = collection(db, plotKey);
-            onSnapshot(tenantsRef, (snapshot) => {
+            onSnapshot(tenantsCollection, (snapshot) => {
                 const updatedTenants = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
