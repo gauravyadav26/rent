@@ -142,11 +142,23 @@ function loadTenants() {
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     console.log('Loaded tenants:', tenants);
     
+    // Ensure each tenant has an ID
+    const validTenants = tenants.map(tenant => ({
+        ...tenant,
+        id: tenant.id || Date.now().toString(),
+        plotName: tenant.plotName || currentPlot
+    }));
+    
+    // Save back to localStorage if any IDs were added
+    if (validTenants.length !== tenants.length) {
+        localStorage.setItem(plotKey, JSON.stringify(validTenants));
+    }
+    
     // Apply search filter if exists
-    const filteredTenants = currentSearchTerm ? tenants.filter(tenant => 
-        tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
-        tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
-    ) : tenants;
+    const filteredTenants = currentSearchTerm ? validTenants.filter(tenant => 
+        tenant.tenantName?.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+        tenant.roomNumber?.toLowerCase().includes(currentSearchTerm.toLowerCase())
+    ) : validTenants;
     
     // Display the tenants
     const tenantsList = document.getElementById('tenants-list');
@@ -159,7 +171,7 @@ function loadTenants() {
     }
     
     // Update tenant select dropdown
-    updateTenantSelect(tenants);
+    updateTenantSelect(validTenants);
     
     // Update dashboard stats
     updateDashboardStats();
@@ -441,22 +453,42 @@ async function handleDataImport(event) {
 
 // Display Functions
 function createTenantCard(tenant) {
-    const monthsSinceStart = calculateMonthsDifference(tenant.startDate);
-    const currentMonthBill = calculateCurrentMonthBill(tenant);
-    const totalElectricityBill = calculateTotalElectricityBill(tenant);
-    const previousDue = calculatePreviousDue(tenant);
-    const lastPayment = tenant.paymentHistory?.[tenant.paymentHistory.length - 1] || { amount: 0, date: 'N/A' };
-    const lastReading = tenant.electricityReadings?.[tenant.electricityReadings.length - 1] || { reading: 0, date: 'N/A' };
-    const previousReading = tenant.electricityReadings?.[tenant.electricityReadings.length - 2] || { reading: 0, date: 'N/A' };
-    const startReading = tenant.electricityReadings?.[0] || { reading: 0, date: 'N/A' };
-    const currentMonthDue = tenant.monthlyRent + currentMonthBill;
-    const isActive = !tenant.endDate;
+    if (!tenant) {
+        console.error('Invalid tenant data:', tenant);
+        return '<div class="tenant-card error">Invalid tenant data</div>';
+    }
+
+    // Ensure all required fields exist with defaults
+    const safeTenant = {
+        id: tenant.id || Date.now().toString(),
+        tenantName: tenant.tenantName || 'Unknown Tenant',
+        roomNumber: tenant.roomNumber || 'N/A',
+        startDate: tenant.startDate || new Date().toISOString().split('T')[0],
+        monthlyRent: parseFloat(tenant.monthlyRent) || 0,
+        advancePaid: parseFloat(tenant.advancePaid) || 0,
+        electricityRate: parseFloat(tenant.electricityRate) || DEFAULT_ELECTRICITY_RATE,
+        electricityReadings: Array.isArray(tenant.electricityReadings) ? tenant.electricityReadings : [],
+        paymentHistory: Array.isArray(tenant.paymentHistory) ? tenant.paymentHistory : [],
+        previousDue: parseFloat(tenant.previousDue) || 0,
+        endDate: tenant.endDate || null
+    };
+
+    const monthsSinceStart = calculateMonthsDifference(safeTenant.startDate);
+    const currentMonthBill = calculateCurrentMonthBill(safeTenant);
+    const totalElectricityBill = calculateTotalElectricityBill(safeTenant);
+    const previousDue = calculatePreviousDue(safeTenant);
+    const lastPayment = safeTenant.paymentHistory[safeTenant.paymentHistory.length - 1] || { amount: 0, date: 'N/A' };
+    const lastReading = safeTenant.electricityReadings[safeTenant.electricityReadings.length - 1] || { reading: 0, date: 'N/A' };
+    const previousReading = safeTenant.electricityReadings[safeTenant.electricityReadings.length - 2] || { reading: 0, date: 'N/A' };
+    const startReading = safeTenant.electricityReadings[0] || { reading: 0, date: 'N/A' };
+    const currentMonthDue = safeTenant.monthlyRent + currentMonthBill;
+    const isActive = !safeTenant.endDate;
 
     return `
         <div class="tenant-card ${isActive ? 'active-tenant' : 'past-tenant'}">
             <h3>
-                <i class="fas fa-user"></i> ${tenant.tenantName}
-                <span class="room-number">Room ${tenant.roomNumber}</span>
+                <i class="fas fa-user"></i> ${safeTenant.tenantName}
+                <span class="room-number">Room ${safeTenant.roomNumber}</span>
                 <span class="tenant-status ${isActive ? 'active' : 'past'}">
                     ${isActive ? 'Active' : 'Past'}
                 </span>
@@ -464,34 +496,34 @@ function createTenantCard(tenant) {
             <div class="tenant-info">
                 <div class="info-section" data-section="basic-info">
                     <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
-                    <p><strong>Start Date:</strong> ${formatDate(tenant.startDate)}</p>
-                    ${tenant.endDate ? `<p><strong>End Date:</strong> ${formatDate(tenant.endDate)}</p>` : ''}
+                    <p><strong>Start Date:</strong> ${formatDate(safeTenant.startDate)}</p>
+                    ${safeTenant.endDate ? `<p><strong>End Date:</strong> ${formatDate(safeTenant.endDate)}</p>` : ''}
                     <p><strong>Months Since Start:</strong> ${monthsSinceStart}</p>
-                    <p><strong>Monthly Rent:</strong> ₹${formatIndianNumber(tenant.monthlyRent)}</p>
-                    <p><strong>Advance Paid:</strong> ₹${tenant.advancePaid}</p>
+                    <p><strong>Monthly Rent:</strong> ₹${formatIndianNumber(safeTenant.monthlyRent)}</p>
+                    <p><strong>Advance Paid:</strong> ₹${formatIndianNumber(safeTenant.advancePaid)}</p>
                 </div>
                 
                 <div class="info-section">
                     <h4><i class="fas fa-money-bill-wave"></i> Payment Information</h4>
                     <p><strong>Current Month:</strong> ₹${formatIndianNumber(Math.round(currentMonthDue))}</p>
                     <p><strong>Total Due:</strong> <span class="total-due-amount">₹${formatIndianNumber(Math.round(previousDue || 0))}</span></p>
-                    <p><strong>Last Payment:</strong> ₹${Math.round(lastPayment.amount)} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
+                    <p><strong>Last Payment:</strong> ₹${formatIndianNumber(Math.round(lastPayment.amount))} (${lastPayment.date === 'N/A' ? 'N/A' : formatDate(lastPayment.date)})</p>
                 </div>
                 
                 <div class="info-section" data-section="electricity">
                     <h4><i class="fas fa-bolt"></i> Electricity Information</h4>
                     <p>
                         <strong>Start Reading:</strong> 
-                        ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})
-                        <button onclick="editElectricityReading(${tenant.id}, 0)" class="inline-edit-btn" title="Edit Start Reading">
+                        ${startReading.reading}
+                        <button onclick="editElectricityReading('${safeTenant.id}', 0)" class="inline-edit-btn" title="Edit Start Reading">
                             <i class="fas fa-edit"></i>
                         </button>
                     </p>
                     <p>
                         <strong>Previous Reading:</strong> 
                         ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})
-                        ${tenant.electricityReadings.length > 1 ? `
-                            <button onclick="editElectricityReading(${tenant.id}, ${tenant.electricityReadings.length - 2})" class="inline-edit-btn" title="Edit Previous Reading">
+                        ${safeTenant.electricityReadings.length > 1 ? `
+                            <button onclick="editElectricityReading('${safeTenant.id}', ${safeTenant.electricityReadings.length - 2})" class="inline-edit-btn" title="Edit Previous Reading">
                                 <i class="fas fa-edit"></i>
                             </button>
                         ` : ''}
@@ -499,8 +531,8 @@ function createTenantCard(tenant) {
                     <p>
                         <strong>Latest Reading:</strong> 
                         ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})
-                        ${tenant.electricityReadings.length > 0 ? `
-                            <button onclick="editElectricityReading(${tenant.id}, ${tenant.electricityReadings.length - 1})" class="inline-edit-btn" title="Edit Latest Reading">
+                        ${safeTenant.electricityReadings.length > 0 ? `
+                            <button onclick="editElectricityReading('${safeTenant.id}', ${safeTenant.electricityReadings.length - 1})" class="inline-edit-btn" title="Edit Latest Reading">
                                 <i class="fas fa-edit"></i>
                             </button>
                         ` : ''}
@@ -510,18 +542,18 @@ function createTenantCard(tenant) {
                 </div>
             </div>
             <div class="tenant-actions">
-                <button onclick="editTenant(${tenant.id})" class="edit-btn">
+                <button onclick="editTenant('${safeTenant.id}')" class="edit-btn">
                     <i class="fas fa-edit"></i> Edit
                 </button>
                 ${isActive ? `
-                    <button onclick="addElectricityReading(${tenant.id})" class="submit-btn">
+                    <button onclick="addElectricityReading('${safeTenant.id}')" class="submit-btn">
                         <i class="fas fa-bolt"></i> Add Reading
                     </button>
-                    <button onclick="recordPayment(${tenant.id})" class="submit-btn">
+                    <button onclick="recordPayment('${safeTenant.id}')" class="submit-btn">
                         <i class="fas fa-money-bill-wave"></i> Record Payment
                     </button>
                 ` : ''}
-                <button onclick="deleteTenant(${tenant.id})" class="delete-btn">
+                <button onclick="deleteTenant('${safeTenant.id}')" class="delete-btn">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -622,14 +654,29 @@ async function handleTenantFormSubmit(e) {
 // Update the display function with improved tenant information
 function displayTenants(tenants) {
     const tenantsList = document.getElementById('tenants-list');
+    if (!tenantsList) return;
+    
     tenantsList.innerHTML = '';
 
-    if (tenants.length === 0) {
-        tenantsList.innerHTML = '<p class="no-tenants">No tenants found.</p>';
+    if (!tenants || tenants.length === 0) {
+        tenantsList.innerHTML = '<div class="no-tenants">No tenants found for this plot.</div>';
         return;
     }
 
-    tenants.forEach(tenant => {
+    // Ensure each tenant has required fields
+    const validTenants = tenants.map(tenant => ({
+        ...tenant,
+        id: tenant.id || Date.now().toString(),
+        tenantName: tenant.tenantName || 'Unknown Tenant',
+        roomNumber: tenant.roomNumber || 'N/A',
+        monthlyRent: tenant.monthlyRent || 0,
+        electricityRate: tenant.electricityRate || DEFAULT_ELECTRICITY_RATE,
+        electricityReadings: tenant.electricityReadings || [],
+        paymentHistory: tenant.paymentHistory || [],
+        previousDue: tenant.previousDue || 0
+    }));
+
+    validTenants.forEach(tenant => {
         const tenantCard = document.createElement('div');
         tenantCard.innerHTML = createTenantCard(tenant);
         tenantsList.appendChild(tenantCard.firstElementChild);
@@ -643,7 +690,7 @@ function updateTenantSelect(tenants) {
     if (paymentTenantSelect) {
         const options = '<option value="">All Tenants</option>' + 
             tenants.map(tenant => 
-                `<option value="${tenant.id}">${tenant.tenantName} - Room ${tenant.roomNumber}</option>`
+                `<option value="${tenant.id}">${tenant.tenantName || 'Unknown'} - Room ${tenant.roomNumber || 'N/A'}</option>`
             ).join('');
         
         paymentTenantSelect.innerHTML = options;
@@ -668,25 +715,38 @@ function handleSearch(e) {
 
 // Calculate previous due based on total months minus 1 multiplied by rent, plus total electricity bill due, minus total payments made
 function calculatePreviousDue(tenant) {
+    if (!tenant) return 0;
+    
     const totalMonths = calculateMonthsDifference(tenant.startDate);
-    const totalRentDue = totalMonths * tenant.monthlyRent;
+    const totalRentDue = totalMonths * (tenant.monthlyRent || 0);
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
     const totalPaymentsMade = calculateTotalPayments(tenant);
-    const startingDue = tenant.startingDue || 0;
-    return totalRentDue + totalElectricityDue - totalPaymentsMade  + startingDue;
+    const startingDue = parseFloat(tenant.startingDue) || 0;
     
+    // Calculate the total due including starting due
+    const totalDue = totalRentDue + totalElectricityDue - totalPaymentsMade + startingDue;
+    
+    // Ensure we don't return negative values
+    return Math.max(0, totalDue);
 }
 
 // Update previous due when recording payment
 function updatePreviousDue(tenant, paymentAmount) {
-    tenant.previousDue = calculatePreviousDue(tenant);
-    return tenant.previousDue;
+    if (!tenant) return 0;
+    
+    const currentDue = calculatePreviousDue(tenant);
+    const newDue = Math.max(0, currentDue - paymentAmount);
+    tenant.previousDue = newDue;
+    return newDue;
 }
 
 // Update previous due when adding electricity reading
 function updatePreviousDueWithNewReading(tenant) {
-    tenant.previousDue = calculatePreviousDue(tenant);
-    return tenant.previousDue;
+    if (!tenant) return 0;
+    
+    const newDue = calculatePreviousDue(tenant);
+    tenant.previousDue = newDue;
+    return newDue;
 }
 
 // Record payment
@@ -1761,78 +1821,4 @@ function loadMonthlyHistory() {
     // Update total till now stats
     document.getElementById('total-payments-till-now').textContent = `₹${formatIndianNumber(Math.round(totalPaymentsTillNow))}`;
     document.getElementById('total-bills-till-now').textContent = `₹${formatIndianNumber(Math.round(totalBillsTillNow))}`;
-    
-    // Calculate monthly totals
-    const monthlyData = sortedMonths.map(month => {
-        const [year, monthNum] = month.split('-');
-        const monthStart = new Date(year, monthNum - 1, 1);
-        const monthEnd = new Date(year, monthNum, 0);
-        
-        let totalRent = 0;
-        let totalBills = 0;
-        let totalPayments = 0;
-        
-        allTenants.forEach(tenant => {
-            // Calculate rent for the month
-            if (tenant.startDate && new Date(tenant.startDate) <= monthEnd) {
-                totalRent += tenant.monthlyRent || 0;
-            }
-            
-            // Calculate bills for the month
-            const monthReadings = tenant.electricityReadings?.filter(reading => {
-                const readingDate = new Date(reading.date);
-                return readingDate >= monthStart && readingDate <= monthEnd;
-            });
-            
-            if (monthReadings && monthReadings.length >= 2) {
-                const units = monthReadings[monthReadings.length - 1].reading - monthReadings[0].reading;
-                totalBills += units * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
-            }
-            
-            // Calculate payments for the month
-            const monthPayments = tenant.paymentHistory?.filter(payment => {
-                const paymentDate = new Date(payment.date);
-                return paymentDate >= monthStart && paymentDate <= monthEnd;
-            });
-            
-            if (monthPayments) {
-                totalPayments += monthPayments.reduce((sum, payment) => sum + payment.amount, 0);
-            }
-        });
-        
-        return {
-            month,
-            totalRent,
-            totalBills,
-            totalPayments
-        };
-    });
-    
-    // Update monthly stats with the latest month (first in the array)
-    const currentMonth = monthlyData[0];
-    if (currentMonth) {
-        document.getElementById('monthly-total-rent').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalRent))}`;
-        document.getElementById('monthly-total-bills').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalBills))}`;
-        document.getElementById('monthly-total-payments').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalPayments))}`;
-    }
-    
-    // Update monthly breakdown
-    const breakdownHtml = monthlyData.map(data => {
-        const [year, month] = data.month.split('-');
-        const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
-        const yearMonth = `${monthName} ${year}`;
-        
-        return `
-            <div class="monthly-item">
-                <div class="month">${yearMonth}</div>
-                <div class="amount">Rent: ₹${formatIndianNumber(Math.round(data.totalRent))}</div>
-                <div class="amount">Bills: ₹${formatIndianNumber(Math.round(data.totalBills))}</div>
-                <div class="amount ${data.totalPayments >= (data.totalRent + data.totalBills) ? 'positive' : 'negative'}">
-                    Payments: ₹${formatIndianNumber(Math.round(data.totalPayments))}
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    document.getElementById('monthly-breakdown').innerHTML = breakdownHtml;
 }
