@@ -14,6 +14,126 @@ if (!firebase.apps.length) {
 }
 const db = firebase.firestore();
 
+// Caching and optimization system
+const CacheManager = {
+    // In-memory cache for tenants data
+    tenantCache: new Map(),
+    
+    // Cache timestamps for invalidation
+    cacheTimestamps: new Map(),
+    
+    // Cache duration (15 minutes)
+    CACHE_DURATION: 15 * 60 * 1000,
+    
+    // Pending changes that need to be synced
+    pendingChanges: new Map(),
+    
+    // Batch operation queue
+    batchQueue: [],
+    
+    // Initialize cache for a plot
+    initCache(plot) {
+        if (!this.tenantCache.has(plot)) {
+            this.tenantCache.set(plot, []);
+            this.cacheTimestamps.set(plot, 0);
+        }
+    },
+    
+    // Get cached data if valid
+    getCachedData(plot) {
+        this.initCache(plot);
+        const timestamp = this.cacheTimestamps.get(plot);
+        const now = Date.now();
+        
+        if (now - timestamp < this.CACHE_DURATION) {
+            return this.tenantCache.get(plot);
+        }
+        return null;
+    },
+    
+    // Set cached data
+    setCachedData(plot, data) {
+        this.tenantCache.set(plot, data);
+        this.cacheTimestamps.set(plot, Date.now());
+    },
+    
+    // Invalidate cache for a plot
+    invalidateCache(plot) {
+        this.cacheTimestamps.set(plot, 0);
+    },
+    
+    // Add pending change
+    addPendingChange(plot, tenantId, operation, data) {
+        if (!this.pendingChanges.has(plot)) {
+            this.pendingChanges.set(plot, new Map());
+        }
+        this.pendingChanges.get(plot).set(tenantId, { operation, data, timestamp: Date.now() });
+    },
+    
+    // Get pending changes for a plot
+    getPendingChanges(plot) {
+        return this.pendingChanges.get(plot) || new Map();
+    },
+    
+    // Clear pending changes for a plot
+    clearPendingChanges(plot) {
+        this.pendingChanges.delete(plot);
+    },
+    
+    // Add to batch queue
+    addToBatch(operation) {
+        this.batchQueue.push(operation);
+    },
+    
+    // Process batch queue
+    async processBatch() {
+        if (this.batchQueue.length === 0) return;
+        
+        const batch = db.batch();
+        const operations = [...this.batchQueue];
+        this.batchQueue = [];
+        
+        for (const op of operations) {
+            const { type, path, data } = op;
+            const docRef = db.doc(path);
+            
+            switch (type) {
+                case 'set':
+                    batch.set(docRef, data);
+                    break;
+                case 'update':
+                    batch.update(docRef, data);
+                    break;
+                case 'delete':
+                    batch.delete(docRef);
+                    break;
+            }
+        }
+        
+        try {
+            await batch.commit();
+            console.log(`Batch processed ${operations.length} operations`);
+        } catch (error) {
+            console.error('Batch operation failed:', error);
+            // Re-queue failed operations
+            this.batchQueue.push(...operations);
+        }
+    }
+};
+
+// Debounce utility
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
 
@@ -118,25 +238,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up event listeners after data is loaded
     setupEventListeners();
     updateDashboardStats();
+    
+    // Process any remaining batch operations before page unload
+    window.addEventListener('beforeunload', async (event) => {
+        if (CacheManager.batchQueue.length > 0) {
+            console.log('Processing remaining batch operations before unload...');
+            try {
+                await CacheManager.processBatch();
+            } catch (error) {
+                console.error('Failed to process batch operations before unload:', error);
+            }
+        }
+    });
 });
 
-// Set up periodic data refresh
+// Set up periodic data refresh with intelligent caching
 function setupPeriodicRefresh() {
-    // Refresh data every 15 minutes
+    // Refresh data every 30 minutes instead of 15 (reduced frequency)
     setInterval(async () => {
         try {
-            await loadTenantsFromFirebase();
-            console.log('Data refreshed successfully');
+            const currentPlot = getCurrentPlot();
+            const cachedData = CacheManager.getCachedData(currentPlot);
+            
+            // Only refresh if cache is expired or doesn't exist
+            if (!cachedData) {
+                console.log('Cache expired, refreshing data...');
+                await loadTenantsFromFirebase();
+                console.log('Data refreshed successfully');
+            } else {
+                console.log('Using cached data, skipping refresh');
+            }
         } catch (error) {
             console.error('Data refresh failed:', error);
         }
-    }, 15 * 60 * 1000); // 15 minutes
+    }, 30 * 60 * 1000); // 30 minutes instead of 15
 }
 
-// Load tenants from Firestore
+// Load tenants from Firestore with caching
 async function loadTenantsFromFirebase() {
     const currentPlot = getCurrentPlot();
+    
+    // Check cache first
+    const cachedData = CacheManager.getCachedData(currentPlot);
+    if (cachedData) {
+        console.log('Using cached data for plot:', currentPlot);
+        displayTenants(cachedData);
+        updateTenantSelect(cachedData);
+        updateDashboardStats();
+        return cachedData;
+    }
+    
     try {
+        console.log('Fetching data from Firebase for plot:', currentPlot);
         const snapshot = await db.collection('tenants')
             .where('plotName', '==', currentPlot)
             .get();
@@ -148,6 +301,9 @@ async function loadTenantsFromFirebase() {
             data.id = Number(data.id);
             tenants.push(data);
         });
+        
+        // Cache the data
+        CacheManager.setCachedData(currentPlot, tenants);
         
         // Always update localStorage with Firebase data
         const plotKey = getPlotStorageKey(currentPlot);
@@ -420,12 +576,27 @@ async function saveTenant(tenant) {
         tenants.push(tenant);
     }
     
+    // Update localStorage immediately
     localStorage.setItem(plotKey, JSON.stringify(tenants));
     
-    try {
-        await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
-    } catch (error) {
-        console.error('Firebase save failed:', error);
+    // Update cache
+    CacheManager.setCachedData(tenant.plotName, tenants);
+    
+    // Add to batch queue instead of immediate Firebase call
+    CacheManager.addToBatch({
+        type: 'set',
+        path: `tenants/${tenant.id}`,
+        data: tenant
+    });
+    
+    // Process batch if queue is getting large or after a delay
+    if (CacheManager.batchQueue.length >= 10) {
+        await CacheManager.processBatch();
+    } else {
+        // Process batch after 2 seconds if no more operations
+        setTimeout(() => {
+            CacheManager.processBatch();
+        }, 2000);
     }
 }
 
@@ -455,12 +626,27 @@ async function handleDataImport(event) {
 
         // Save to localStorage
         localStorage.setItem(plotKey, JSON.stringify(data));
+        
+        // Update cache
+        CacheManager.setCachedData(currentPlot, data);
 
-        // Save to Firebase
+        // Use batch operations for Firebase import
         try {
+            // Clear existing batch queue
+            CacheManager.batchQueue = [];
+            
+            // Add all tenants to batch queue
             for (const tenant of data) {
-                await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
+                CacheManager.addToBatch({
+                    type: 'set',
+                    path: `tenants/${tenant.id}`,
+                    data: tenant
+                });
             }
+            
+            // Process the batch
+            await CacheManager.processBatch();
+            console.log(`Imported ${data.length} tenants using batch operations`);
         } catch (error) {
             console.error('Firebase import failed:', error);
             alert('Warning: Data was imported locally but failed to sync with Firebase.');
@@ -690,21 +876,24 @@ function updateTenantSelect(tenants) {
     }
 }
 
-// Handle search functionality
-function handleSearch(e) {
-    currentSearchTerm = e.target.value.toLowerCase();
+// Handle search functionality with debouncing
+const debouncedSearch = debounce((searchTerm) => {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
     const filteredTenants = tenants.filter(tenant => 
-        tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
-        tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
+        tenant.tenantName.toLowerCase().includes(searchTerm) ||
+        tenant.roomNumber.toLowerCase().includes(searchTerm)
     );
     
     displayTenants(filteredTenants);
-}
+}, 300);
 
+function handleSearch(e) {
+    currentSearchTerm = e.target.value.toLowerCase();
+    debouncedSearch(currentSearchTerm);
+}
 
 // Calculate previous due based on total months minus 1 multiplied by rent, plus total electricity bill due, minus total payments made
 function calculatePreviousDue(tenant) {
@@ -811,17 +1000,21 @@ async function deleteTenant(tenantId) {
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     const updatedTenants = tenants.filter(t => t.id !== Number(tenantId));
 
-    // Save to localStorage
+    // Update localStorage immediately
     localStorage.setItem(plotKey, JSON.stringify(updatedTenants));
+    
+    // Update cache
+    CacheManager.setCachedData(currentPlot, updatedTenants);
 
-    // Save to Firebase
-    try {
-        await db.collection('tenants').doc(Number(tenantId).toString()).delete();
-    } catch (error) {
-        console.error('Error deleting from Firebase:', error);
-        alert('Error deleting from database. Please try again.');
-        return;
-    }
+    // Add delete operation to batch queue
+    CacheManager.addToBatch({
+        type: 'delete',
+        path: `tenants/${tenantId}`,
+        data: null
+    });
+    
+    // Process batch immediately for delete operations
+    await CacheManager.processBatch();
 
     loadTenants();
     updateDashboardStats();
@@ -1670,12 +1863,25 @@ async function handleDataSync() {
         const plotKey = getPlotStorageKey(currentPlot);
         const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
 
-        // Sync each tenant to Firebase
+        // Clear existing batch queue
+        CacheManager.batchQueue = [];
+        
+        // Add all tenants to batch queue for sync
         for (const tenant of tenants) {
-            await db.collection('tenants').doc(tenant.id.toString()).set(tenant);
+            CacheManager.addToBatch({
+                type: 'set',
+                path: `tenants/${tenant.id}`,
+                data: tenant
+            });
         }
-
-        // Load latest data from Firebase
+        
+        // Process the batch
+        await CacheManager.processBatch();
+        
+        // Invalidate cache to force fresh data load
+        CacheManager.invalidateCache(currentPlot);
+        
+        // Load latest data from Firebase (will use fresh cache)
         await loadTenantsFromFirebase();
 
         // Show success status
