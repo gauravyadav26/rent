@@ -141,13 +141,31 @@ let currentSearchTerm = '';
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    // Prevent automatic mini-infobar/prompts
     e.preventDefault();
-    // Stash the event so it can be triggered later
+    // Stash the event so it can be triggered later.
     deferredPrompt = e;
+
+    // Show custom banner
+    const banner = document.getElementById('install-banner');
+    if (banner) banner.style.display = 'flex';
 });
 
 // Listen for successful installation
+// Handle successful install – hide banner and clear prompt
+document.getElementById('install-btn')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('User response to the install prompt:', outcome);
+    deferredPrompt = null;
+    document.getElementById('install-banner')?.remove();
+});
+
+document.getElementById('dismiss-install')?.addEventListener('click', () => {
+    document.getElementById('install-banner')?.remove();
+});
+
 window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
 });
@@ -470,8 +488,10 @@ function setupEventListeners() {
     // Payment history filters
     const paymentTenantSelect = document.getElementById('payment-tenant-select');
     const paymentMonth = document.getElementById('payment-month');
+    const allMonthsCheckbox = document.getElementById('all-months');
     paymentTenantSelect.addEventListener('change', loadPaymentHistory);
     paymentMonth.addEventListener('change', loadPaymentHistory);
+    allMonthsCheckbox.addEventListener('change', loadPaymentHistory);
 
     // Data management
     const importDataInput = document.getElementById('import-data');
@@ -1035,7 +1055,8 @@ function loadPaymentHistory() {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         monthInput.value = `${year}-${month}`;
     }
-    const selectedMonth = monthInput.value;
+    const allMonthsChecked = document.getElementById('all-months').checked;
+    const selectedMonth = allMonthsChecked ? '' : monthInput.value;
 
     const paymentHistoryList = document.getElementById('payment-history-list');
     paymentHistoryList.innerHTML = '';

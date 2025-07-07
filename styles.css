@@ -1222,6 +1222,21 @@ td {
 
 /* Payment filters */
 .payment-filters {
+    gap: 0.5rem;
+}
+
+.all-months-option {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.all-months-option input {
+    transform: scale(1.1);
+}
+
+/* existing rules */
+.payment-filters {
     display: flex;
     gap: 1rem;
     margin-bottom: 1rem;
@@ -1713,16 +1728,48 @@ td {
 }
 
 [data-theme="dark"] .sync-status.syncing {
-    background-color: #1e3a8a;
-    color: #bfdbfe;
+background-color: #1e3a8a;
+color: #bfdbfe;
+}
+
+.install-banner{
+position:fixed;
+bottom:1rem;
+left:1rem;
+right:1rem;
+background:var(--card-background,#fff);
+box-shadow:var(--shadow-md,0 4px 6px rgba(0,0,0,.1));
+border:1px solid var(--border-color,#e5e7eb);
+padding:.75rem 1rem;
+border-radius:8px;
+display:flex;
+gap:.5rem;
+align-items:center;
+z-index:1000;
+}
+.install-btn{
+padding:.4rem .8rem;
+background:var(--primary-color,#3b82f6);
+color:#fff;
+border:none;
+border-radius:4px;
+cursor:pointer;
+}
+.dismiss-btn{
+background:none;
+border:none;
+font-size:1.2rem;
+line-height:1;
+margin-left:auto;
+cursor:pointer;
 }
 
 /* Section Header */
 .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1rem;
 }
 
 .section-header h2 {
