@@ -1059,6 +1059,70 @@ td {
 }
 
 /* Payment Form Styles */
+
+/* Vacate Form Styles */
+.vacate-form {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--card-background);
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1100; /* higher than other modals */
+    width: 90%;
+    max-width: 400px;
+    border: 1px solid var(--border-color);
+}
+
+.vacate-form h3 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: var(--font-size-lg);
+    text-align: center;
+    font-weight: 700;
+}
+
+.vacate-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.vacate-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.vacate-form input[type="date"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background-color: var(--background-color);
+    color: var(--text-primary);
+}
+
+.vacate-form .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+/* Add overlay for vacate form */
+.vacate-form::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+}
+
 .payment-form {
     position: fixed;
     top: 50%;
@@ -1221,6 +1285,21 @@ td {
 }
 
 /* Payment filters */
+.payment-filters {
+    gap: 0.5rem;
+}
+
+.all-months-option {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.all-months-option input {
+    transform: scale(1.1);
+}
+
+/* existing rules */
 .payment-filters {
     display: flex;
     gap: 1rem;
@@ -1713,16 +1792,48 @@ td {
 }
 
 [data-theme="dark"] .sync-status.syncing {
-    background-color: #1e3a8a;
-    color: #bfdbfe;
+background-color: #1e3a8a;
+color: #bfdbfe;
+}
+
+.install-banner{
+position:fixed;
+bottom:1rem;
+left:1rem;
+right:1rem;
+background:var(--card-background,#fff);
+box-shadow:var(--shadow-md,0 4px 6px rgba(0,0,0,.1));
+border:1px solid var(--border-color,#e5e7eb);
+padding:.75rem 1rem;
+border-radius:8px;
+display:flex;
+gap:.5rem;
+align-items:center;
+z-index:1000;
+}
+.install-btn{
+padding:.4rem .8rem;
+background:var(--primary-color,#3b82f6);
+color:#fff;
+border:none;
+border-radius:4px;
+cursor:pointer;
+}
+.dismiss-btn{
+background:none;
+border:none;
+font-size:1.2rem;
+line-height:1;
+margin-left:auto;
+cursor:pointer;
 }
 
 /* Section Header */
 .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 1rem;
 }
 
 .section-header h2 {

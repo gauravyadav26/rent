@@ -18,7 +18,7 @@
     <!-- Styles -->
     <link rel="stylesheet" href="/styles.css?ver=1.0.0">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
 
     <!-- Theme Initialization -->
     <script>
@@ -34,6 +34,12 @@
     </script>
 </head>
 <body>
+    <!-- PWA install banner -->
+    <div id="install-banner" style="display:none" class="install-banner">
+        <span>Add this app to your home screen for a better experience.</span>
+        <button id="install-btn" class="install-btn">Install</button>
+        <button id="dismiss-install" class="dismiss-btn" aria-label="Dismiss">×</button>
+    </div>
     <div class="container">
         <div class="plot-tabs">
             <button class="plot-tab active" data-plot="home">
@@ -219,6 +225,10 @@
                             <option value="">All Tenants</option>
                         </select>
                         <input type="month" id="payment-month">
+                        <label class="all-months-option">
+                            <input type="checkbox" id="all-months">
+                            All Months
+                        </label>
                     </div>
                     <div class="payment-summary">
                         <div class="summary-card">

@@ -141,13 +141,31 @@ let currentSearchTerm = '';
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    // Prevent automatic mini-infobar/prompts
     e.preventDefault();
-    // Stash the event so it can be triggered later
+    // Stash the event so it can be triggered later.
     deferredPrompt = e;
+
+    // Show custom banner
+    const banner = document.getElementById('install-banner');
+    if (banner) banner.style.display = 'flex';
 });
 
 // Listen for successful installation
+// Handle successful install – hide banner and clear prompt
+document.getElementById('install-btn')?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('User response to the install prompt:', outcome);
+    deferredPrompt = null;
+    document.getElementById('install-banner')?.remove();
+});
+
+document.getElementById('dismiss-install')?.addEventListener('click', () => {
+    document.getElementById('install-banner')?.remove();
+});
+
 window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
 });
@@ -470,8 +488,10 @@ function setupEventListeners() {
     // Payment history filters
     const paymentTenantSelect = document.getElementById('payment-tenant-select');
     const paymentMonth = document.getElementById('payment-month');
+    const allMonthsCheckbox = document.getElementById('all-months');
     paymentTenantSelect.addEventListener('change', loadPaymentHistory);
     paymentMonth.addEventListener('change', loadPaymentHistory);
+    allMonthsCheckbox.addEventListener('change', loadPaymentHistory);
 
     // Data management
     const importDataInput = document.getElementById('import-data');
@@ -518,7 +538,17 @@ function findTenant(tenantId, plot = getCurrentPlot()) {
 function calculateMonthsDifference(startDate, endDate = new Date()) {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+
+    // Basic month difference (without day adjustment)
+    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+
+    // If the current day-of-month is past the start day, we have completed the next month
+    if (end.getDate() >= start.getDate()) {
+        months += 1;
+    }
+
+    // Ensure at least 1 month is counted for any stay that has started
+    return Math.max(1, months);
 }
 
 // Calculate total electricity bill for a tenant
@@ -535,12 +565,36 @@ function calculateTotalElectricityBill(tenant) {
 // Calculate current month's electricity bill
 function calculateCurrentMonthBill(tenant) {
     if (!tenant.electricityReadings || tenant.electricityReadings.length < 2) return 0;
-    
-    const lastReading = tenant.electricityReadings[tenant.electricityReadings.length - 1];
-    const previousReading = tenant.electricityReadings[tenant.electricityReadings.length - 2];
-    const currentMonthUnits = lastReading.reading - previousReading.reading;
-    
-    return currentMonthUnits * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Filter readings that belong to the current calendar month
+    const readingsThisMonth = tenant.electricityReadings.filter(r => {
+        const d = new Date(r.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    // If no reading has been recorded this month yet, the bill resets to 0
+    if (readingsThisMonth.length === 0) return 0;
+
+    // Locate the first reading of this month in the full readings array
+    const firstIndexThisMonth = tenant.electricityReadings.findIndex(r => {
+        const d = new Date(r.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    // Reading immediately before the first reading of this month (may be in previous month)
+    const prevReading = firstIndexThisMonth > 0
+        ? tenant.electricityReadings[firstIndexThisMonth - 1]
+        : readingsThisMonth[0];
+
+    // Latest reading in the current month
+    const lastReadingThisMonth = readingsThisMonth[readingsThisMonth.length - 1];
+
+    const units = lastReadingThisMonth.reading - prevReading.reading;
+    return Math.max(0, units) * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
 }
 
 // Calculate total electricity due (including unpaid bills)
@@ -557,10 +611,13 @@ function calculateTotalPayments(tenant) {
 }
 
 function calculateRentDue(tenant) {
-    const monthsDiff = calculateMonthsDifference(tenant.startDate);
+    const effectiveEnd = tenant.endDate ? new Date(tenant.endDate) : new Date();
+    const monthsDiff = calculateMonthsDifference(tenant.startDate, effectiveEnd);
+
     const totalRentDue = monthsDiff * tenant.monthlyRent;
     const totalPaid = calculateTotalPayments(tenant);
     const currentMonthBill = calculateCurrentMonthBill(tenant);
+
     return totalRentDue - totalPaid + tenant.previousDue + currentMonthBill;
 }
 
@@ -746,6 +803,9 @@ function createTenantCard(tenant) {
                     <button onclick="recordPayment(${tenant.id})" class="submit-btn">
                         <i class="fas fa-money-bill-wave"></i> Record Payment
                     </button>
+                    <button onclick="openVacateForm(${tenant.id})" class="submit-btn">
+                        <i class="fas fa-sign-out-alt"></i> Vacate
+                    </button>
                 ` : ''}
                 <button onclick="deleteTenant(${tenant.id})" class="delete-btn">
                     <i class="fas fa-trash"></i> Delete
@@ -761,13 +821,14 @@ function updateDashboardStats() {
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
-    // Calculate total tenants
-    document.getElementById('total-tenants').textContent = formatIndianNumber(tenants.length);
+    // Identify ACTIVE tenants (no endDate)
+    const activeTenants = tenants.filter(t => !t.endDate);
+
+    // Calculate total tenants (active only)
+    document.getElementById('total-tenants').textContent = formatIndianNumber(activeTenants.length);
     
-    // Calculate total due by summing up each tenant's total due
-    const totalDue = tenants.reduce((sum, tenant) => {
-        return sum + calculatePreviousDue(tenant);
-    }, 0);
+    // Calculate total due for ACTIVE tenants only (exclude past tenants)
+    const totalDue = activeTenants.reduce((sum, tenant) => sum + calculatePreviousDue(tenant), 0);
     
     document.getElementById('total-rent').textContent = `₹${formatIndianNumber(Math.round(totalDue))}`;
     
@@ -775,13 +836,13 @@ function updateDashboardStats() {
     calculateCurrentMonthPayments();
 
     // Calculate total monthly rent
-    const totalMonthlyRent = tenants.reduce((sum, tenant) => {
+    const totalMonthlyRent = activeTenants.reduce((sum, tenant) => {
         return sum + (tenant.monthlyRent || 0);
     }, 0);
     document.getElementById('total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyRent))}`;
 
     // Calculate total monthly bill
-    const totalMonthlyBill = tenants.reduce((sum, tenant) => {
+    const totalMonthlyBill = activeTenants.reduce((sum, tenant) => {
         return sum + calculateCurrentMonthBill(tenant);
     }, 0);
     document.getElementById('total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyBill))}`;
@@ -897,13 +958,16 @@ function handleSearch(e) {
 
 // Calculate previous due based on total months minus 1 multiplied by rent, plus total electricity bill due, minus total payments made
 function calculatePreviousDue(tenant) {
-    const totalMonths = calculateMonthsDifference(tenant.startDate);
+    // If tenant is vacated (has an endDate) we should not include rent after that date
+    const effectiveEnd = tenant.endDate ? new Date(tenant.endDate) : new Date();
+    const totalMonths = calculateMonthsDifference(tenant.startDate, effectiveEnd);
+
     const totalRentDue = totalMonths * tenant.monthlyRent;
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
     const totalPaymentsMade = calculateTotalPayments(tenant);
     const startingDue = tenant.startingDue || 0;
-    return totalRentDue + totalElectricityDue - totalPaymentsMade  + startingDue;
-    
+
+    return totalRentDue + totalElectricityDue - totalPaymentsMade + startingDue;
 }
 
 // Update previous due when recording payment
@@ -1035,7 +1099,8 @@ function loadPaymentHistory() {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         monthInput.value = `${year}-${month}`;
     }
-    const selectedMonth = monthInput.value;
+    const allMonthsChecked = document.getElementById('all-months').checked;
+    const selectedMonth = allMonthsChecked ? '' : monthInput.value;
 
     const paymentHistoryList = document.getElementById('payment-history-list');
     paymentHistoryList.innerHTML = '';
@@ -1464,14 +1529,16 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e =
 
 // Calculate current month's rent
 function calculateCurrentMonthRent(tenant) {
-    return tenant.monthlyRent;
+    return tenant.endDate ? 0 : tenant.monthlyRent;
 }
 
 // Calculate total amount due for a tenant (rent + electricity + previous balance)
 function calculateTotalAmountDue(tenant) {
-    const currentMonthRent = tenant.monthlyRent;
+    // Do not add current month rent if tenant is vacated
+    const currentMonthRent = tenant.endDate ? 0 : tenant.monthlyRent;
     const currentMonthElectricityBill = calculateCurrentMonthBill(tenant);
     const previousBalance = tenant.previousDue || 0;
+
     return currentMonthRent + currentMonthElectricityBill + previousBalance;
 }
 
@@ -1679,6 +1746,87 @@ function handleDataExport() {
     }
 }
 
+// ---------- Vacate Tenant Helpers ----------
+// Open a small form with a proper date selector for vacating a tenant
+function openVacateForm(tenantId) {
+    // Remove any existing vacate form
+    const existing = document.querySelector('.vacate-form');
+    if (existing) existing.remove();
+
+    const form = document.createElement('form');
+    form.className = 'vacate-form';
+    const defaultDate = new Date().toISOString().split('T')[0];
+    form.innerHTML = `
+        <h3>Mark Tenant Vacated</h3>
+        <div class="form-group">
+            <label for="vacateDate">Vacate Date</label>
+            <input type="date" id="vacateDate" required value="${defaultDate}">
+        </div>
+        <div class="form-actions">
+            <button type="submit">Save</button>
+            <button type="button" id="cancelVacate">Cancel</button>
+        </div>
+    `;
+
+    document.body.appendChild(form);
+
+    document.getElementById('cancelVacate').addEventListener('click', () => form.remove());
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const date = document.getElementById('vacateDate').value;
+        await markTenantVacated(tenantId, date);
+        form.remove();
+    });
+}
+
+// Mark tenant as vacated by setting endDate
+async function markTenantVacated(tenantId, customDate = null) {
+    const currentPlot = getCurrentPlot();
+    const plotKey = getPlotStorageKey(currentPlot);
+    const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+    const tenant = tenants.find(t => t.id === Number(tenantId));
+
+    if (!tenant) {
+        alert('Tenant not found');
+        return;
+    }
+
+    if (tenant.endDate) {
+        alert('Tenant is already marked as vacated.');
+        return;
+    }
+
+    const endDate = customDate || new Date().toISOString().split('T')[0];
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        alert('Invalid date format. Please use YYYY-MM-DD.');
+        return;
+    }
+
+    const end = new Date(endDate);
+    if (isNaN(end.getTime())) {
+        alert('Invalid date.');
+        return;
+    }
+
+    const start = new Date(tenant.startDate);
+    if (end < start) {
+        alert('End date cannot be before start date.');
+        return;
+    }
+
+    tenant.endDate = endDate;
+    tenant.isActive = false;
+
+    // Recalculate dues up to endDate
+    tenant.previousDue = calculatePreviousDue(tenant);
+
+    await saveTenant(tenant);
+    loadTenants();
+    updateDashboardStats();
+}
+
 // Add this at the end of the file
 document.addEventListener('DOMContentLoaded', function() {
     // Add click handlers for collapsible sections
@@ -1717,8 +1865,8 @@ function calculateCurrentMonthPayments() {
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
-    // Calculate total payments from all tenants' payment histories
-    tenants.forEach(tenant => {
+    // Calculate total payments from all ACTIVE tenants' payment histories
+    tenants.filter(t => !t.endDate).forEach(tenant => {
         if (tenant.paymentHistory) {
             tenant.paymentHistory.forEach(payment => {
                 const paymentDate = new Date(payment.date);
@@ -1801,25 +1949,23 @@ function updateCombinedStats() {
     // Calculate stats for each plot
     PLOTS.forEach(plot => {
         const tenants = getTenants(plot);
+        const activeTenants = tenants.filter(t => !t.endDate);
         
-        combinedTenants += tenants.length;
+        combinedTenants += activeTenants.length;
         
-        // Calculate total due for this plot using calculatePreviousDue
-        const plotDue = tenants.reduce((sum, tenant) => {
-            const totalDue = calculatePreviousDue(tenant);
-            return sum + totalDue;
-        }, 0);
+        // Calculate total due for ACTIVE tenants only in this plot
+        const plotDue = activeTenants.reduce((sum, tenant) => sum + calculatePreviousDue(tenant), 0);
         combinedDue += plotDue;
 
         // Calculate monthly rent for this plot
-        const plotMonthlyRent = tenants.reduce((sum, tenant) => {
+        const plotMonthlyRent = activeTenants.reduce((sum, tenant) => {
             const rent = tenant.monthlyRent || 0;
             return sum + rent;
         }, 0);
         combinedMonthlyRent += plotMonthlyRent;
 
         // Calculate monthly bill for this plot
-        const plotMonthlyBill = tenants.reduce((sum, tenant) => {
+        const plotMonthlyBill = activeTenants.reduce((sum, tenant) => {
             const bill = calculateCurrentMonthBill(tenant);
             return sum + bill;
         }, 0);
@@ -1827,7 +1973,7 @@ function updateCombinedStats() {
 
         // Calculate current month payments for this plot
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const plotPayments = tenants.reduce((sum, tenant) => {
+        const plotPayments = activeTenants.reduce((sum, tenant) => {
             const tenantPayments = tenant.paymentHistory || [];
             const currentMonthPayments = tenantPayments
                 .filter(payment => payment.date.startsWith(currentMonth))
@@ -2034,9 +2180,17 @@ function loadMonthlyHistory() {
                 return readingDate >= monthStart && readingDate <= monthEnd;
             });
             
-            if (monthReadings && monthReadings.length >= 2) {
-                const units = monthReadings[monthReadings.length - 1].reading - monthReadings[0].reading;
-                totalBills += units * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
+            if (monthReadings && monthReadings.length > 0) {
+                // Identify index of the very first reading of this month in the tenant's full readings list
+                const firstReadingThisMonth = monthReadings[0];
+                const allIdx = tenant.electricityReadings.findIndex(r => r === firstReadingThisMonth);
+                const prevReading = allIdx > 0 ? tenant.electricityReadings[allIdx - 1] : firstReadingThisMonth;
+                const lastReadingThisMonth = monthReadings[monthReadings.length - 1];
+
+                const units = lastReadingThisMonth.reading - prevReading.reading;
+                if (units > 0) {
+                    totalBills += units * (tenant.electricityRate || DEFAULT_ELECTRICITY_RATE);
+                }
             }
             
             // Calculate payments for the month
