@@ -1801,6 +1801,7 @@ position:fixed;
 bottom:1rem;
 left:1rem;
 right:1rem;
+width: min-content;
 background:var(--card-background,#fff);
 box-shadow:var(--shadow-md,0 4px 6px rgba(0,0,0,.1));
 border:1px solid var(--border-color,#e5e7eb);

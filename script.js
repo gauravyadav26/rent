@@ -510,9 +510,105 @@ function setupEventListeners() {
     });
 }
 
+// Helper to get YYYY-MM string from Date
+function formatYearMonth(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,'0')}`;
+}
+
+// Get rent applicable for a specific month based on rentHistory
+function getRentForMonth(tenant, year, month) {
+    if (!tenant.rentHistory || tenant.rentHistory.length === 0) {
+        return tenant.monthlyRent || 0;
+    }
+    // Ensure history sorted by date ascending
+    const history = [...tenant.rentHistory].sort((a,b)=> new Date(a.date)-new Date(b.date));
+    const target = new Date(year, month, 1);
+    let applicable = history[0].amount;
+    history.forEach(entry => {
+        if (new Date(entry.date) <= target) {
+            applicable = entry.amount;
+        }
+    });
+    return applicable;
+}
+
 // Constants
 const PLOTS = ['home', 'baba', 'shop', 'others'];
 const DEFAULT_ELECTRICITY_RATE = 10;
+
+// ====================== Monthly History Cache ======================
+const MONTHLY_CACHE_KEY = 'monthlyDataCache';
+const MONTHS_PER_PAGE = 12;
+
+function invalidateMonthlyCache() {
+    sessionStorage.removeItem(MONTHLY_CACHE_KEY);
+}
+
+function getCachedMonthlyData() {
+    const cache = sessionStorage.getItem(MONTHLY_CACHE_KEY);
+    return cache ? JSON.parse(cache) : null;
+}
+
+function setCachedMonthlyData(data) {
+    sessionStorage.setItem(MONTHLY_CACHE_KEY, JSON.stringify(data));
+}
+// ==================================================================
+// ----------------- Monthly History Pagination --------------------
+let currentMonthPage = 0;
+
+function renderMonthlyBreakdown(monthlyData, page = 0) {
+    currentMonthPage = page;
+    const totalPages = Math.ceil(monthlyData.length / MONTHS_PER_PAGE);
+    const startIdx = page * MONTHS_PER_PAGE;
+    const endIdx = startIdx + MONTHS_PER_PAGE;
+    const pageData = monthlyData.slice(startIdx, endIdx);
+
+    const breakdownContainer = document.getElementById('monthly-breakdown');
+    if (!breakdownContainer) return;
+
+    const breakdownHtml = pageData.map(data => {
+        const [year, month] = data.month.split('-');
+        const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+        return `
+            <div class="monthly-item">
+                <div class="month">${monthName} ${year}</div>
+                <div class="amount">Rent: ₹${formatIndianNumber(Math.round(data.totalRent))}</div>
+                <div class="amount">Bills: ₹${formatIndianNumber(Math.round(data.totalBills))}</div>
+                <div class="amount ${data.totalPayments >= (data.totalRent + data.totalBills) ? 'positive' : 'negative'}">
+                    Payments: ₹${formatIndianNumber(Math.round(data.totalPayments))}
+                </div>
+            </div>`;
+    }).join('');
+
+    breakdownContainer.innerHTML = breakdownHtml || '<div class="no-data">No history available</div>';
+
+    // Render pagination controls
+    let pager = document.getElementById('monthly-pagination');
+    if (!pager) {
+        pager = document.createElement('div');
+        pager.id = 'monthly-pagination';
+        pager.className = 'pagination-controls';
+        breakdownContainer.after(pager);
+    }
+
+    if (totalPages <= 1) {
+        pager.innerHTML = '';
+        return;
+    }
+
+    pager.innerHTML = `
+        <button id="prev-month-page" ${page === 0 ? 'disabled' : ''}>Prev</button>
+        <span class="page-info">Page ${page + 1} / ${totalPages}</span>
+        <button id="next-month-page" ${page >= totalPages - 1 ? 'disabled' : ''}>Next</button>`;
+
+    document.getElementById('prev-month-page')?.addEventListener('click', () => {
+        if (currentMonthPage > 0) renderMonthlyBreakdown(monthlyData, currentMonthPage - 1);
+    });
+    document.getElementById('next-month-page')?.addEventListener('click', () => {
+        if (currentMonthPage < totalPages - 1) renderMonthlyBreakdown(monthlyData, currentMonthPage + 1);
+    });
+}
+// ==================================================================
 
 // Utility Functions
 function getCurrentPlot() {
@@ -612,17 +708,32 @@ function calculateTotalPayments(tenant) {
 
 function calculateRentDue(tenant) {
     const effectiveEnd = tenant.endDate ? new Date(tenant.endDate) : new Date();
-    const monthsDiff = calculateMonthsDifference(tenant.startDate, effectiveEnd);
-
-    const totalRentDue = monthsDiff * tenant.monthlyRent;
+    const start = new Date(tenant.startDate);
+    let current = new Date(start.getFullYear(), start.getMonth(), 1);
+    let totalRentDue = 0;
+    while (current <= effectiveEnd) {
+        const rent = getRentForMonth(tenant, current.getFullYear(), current.getMonth());
+        totalRentDue += rent;
+        current.setMonth(current.getMonth()+1);
+    }
     const totalPaid = calculateTotalPayments(tenant);
     const currentMonthBill = calculateCurrentMonthBill(tenant);
-
     return totalRentDue - totalPaid + tenant.previousDue + currentMonthBill;
 }
 
+
 // Data Management Functions
 async function saveTenant(tenant) {
+    // Initialize rentHistory if missing
+    if (!tenant.rentHistory || tenant.rentHistory.length === 0) {
+        tenant.rentHistory = [{ amount: tenant.monthlyRent, date: tenant.startDate }];
+    } else {
+        // Check if latest entry differs from current rent; if so, append change with today
+        const last = tenant.rentHistory[tenant.rentHistory.length - 1];
+        if (last.amount !== tenant.monthlyRent) {
+            tenant.rentHistory.push({ amount: tenant.monthlyRent, date: new Date().toISOString().split('T')[0] });
+        }
+    }
     const plotKey = getPlotStorageKey(tenant.plotName);
     const tenants = getTenants(tenant.plotName);
     const index = tenants.findIndex(t => t.id === tenant.id);
@@ -635,6 +746,13 @@ async function saveTenant(tenant) {
     
     // Update localStorage immediately
     localStorage.setItem(plotKey, JSON.stringify(tenants));
+    // Invalidate monthly history cache since data changed
+    invalidateMonthlyCache();
+    // If Monthly History tab is active, reload it to reflect changes
+    const monthlySection = document.getElementById('monthly-history');
+    if (monthlySection && monthlySection.style.display === 'block') {
+        loadMonthlyHistory();
+    }
     
     // Update cache
     CacheManager.setCachedData(tenant.plotName, tenants);
@@ -962,7 +1080,15 @@ function calculatePreviousDue(tenant) {
     const effectiveEnd = tenant.endDate ? new Date(tenant.endDate) : new Date();
     const totalMonths = calculateMonthsDifference(tenant.startDate, effectiveEnd);
 
-    const totalRentDue = totalMonths * tenant.monthlyRent;
+    // Recalculate total rent using history
+    let totalRentDue = 0;
+    const start = new Date(tenant.startDate);
+    const end = effectiveEnd;
+    let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cur <= end) {
+        totalRentDue += getRentForMonth(tenant, cur.getFullYear(), cur.getMonth());
+        cur.setMonth(cur.getMonth()+1);
+    }
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
     const totalPaymentsMade = calculateTotalPayments(tenant);
     const startingDue = tenant.startingDue || 0;
@@ -1066,9 +1192,17 @@ async function deleteTenant(tenantId) {
 
     // Update localStorage immediately
     localStorage.setItem(plotKey, JSON.stringify(updatedTenants));
+    // Invalidate monthly history cache since data changed
+    invalidateMonthlyCache();
     
     // Update cache
     CacheManager.setCachedData(currentPlot, updatedTenants);
+
+    // If Monthly History tab is active, reload it to reflect tenant deletion
+    const monthlySection = document.getElementById('monthly-history');
+    if (monthlySection && monthlySection.style.display === 'block') {
+        loadMonthlyHistory();
+    }
 
     // Add delete operation to batch queue
     CacheManager.addToBatch({
@@ -1280,6 +1414,12 @@ async function deletePayment(tenantId, paymentIndex) {
     loadPaymentHistory();
     loadTenants();
     updateDashboardStats();
+
+    // If Monthly History tab is active, reload it to reflect changes
+    const monthlySection = document.getElementById('monthly-history');
+    if (monthlySection && monthlySection.style.display === 'block') {
+        loadMonthlyHistory();
+    }
 }
 
 // Add a function to check Firebase connection
@@ -2108,6 +2248,25 @@ async function editElectricityReading(tenantId, readingIndex) {
 
 // Load monthly history
 function loadMonthlyHistory() {
+    // Use cache if available
+    const cached = getCachedMonthlyData();
+    if (cached && Array.isArray(cached) && cached.length) {
+        // Update header stats with latest month from cache
+        const latest = cached[0];
+        document.getElementById('monthly-total-rent').textContent = `₹${formatIndianNumber(Math.round(latest.totalRent))}`;
+        document.getElementById('monthly-total-bills').textContent = `₹${formatIndianNumber(Math.round(latest.totalBills))}`;
+        document.getElementById('monthly-total-payments').textContent = `₹${formatIndianNumber(Math.round(latest.totalPayments))}`;
+
+        // Also update cumulative totals till now using cached data
+        const totalPaymentsTillNow = cached.reduce((sum, m) => sum + m.totalPayments, 0);
+        const totalBillsTillNow = cached.reduce((sum, m) => sum + m.totalBills, 0);
+        document.getElementById('total-payments-till-now').textContent = `₹${formatIndianNumber(Math.round(totalPaymentsTillNow))}`;
+        document.getElementById('total-bills-till-now').textContent = `₹${formatIndianNumber(Math.round(totalBillsTillNow))}`;
+        renderMonthlyBreakdown(cached, 0);
+        return; // Skip recomputation
+    }
+
+    // Compute afresh if no cache
     // Get data from all plots
     const allTenants = [];
     PLOTS.forEach(plot => {
@@ -2171,7 +2330,7 @@ function loadMonthlyHistory() {
         allTenants.forEach(tenant => {
             // Calculate rent for the month
             if (tenant.startDate && new Date(tenant.startDate) <= monthEnd) {
-                totalRent += tenant.monthlyRent || 0;
+                totalRent += getRentForMonth(tenant, year, monthNum);
             }
             
             // Calculate bills for the month
@@ -2212,6 +2371,9 @@ function loadMonthlyHistory() {
         };
     });
     
+    // Cache for future quick loads
+    setCachedMonthlyData(monthlyData);
+
     // Update monthly stats with the latest month (first in the array)
     const currentMonth = monthlyData[0];
     if (currentMonth) {
@@ -2220,7 +2382,9 @@ function loadMonthlyHistory() {
         document.getElementById('monthly-total-payments').textContent = `₹${formatIndianNumber(Math.round(currentMonth.totalPayments))}`;
     }
     
-    // Update monthly breakdown
+    // Update monthly breakdown via pagination renderer
+    renderMonthlyBreakdown(monthlyData, 0);
+    /* Old inline rendering removed
     const breakdownHtml = monthlyData.map(data => {
         const [year, month] = data.month.split('-');
         const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
@@ -2238,5 +2402,6 @@ function loadMonthlyHistory() {
         `;
     }).join('');
     
-    document.getElementById('monthly-breakdown').innerHTML = breakdownHtml;
+        */
+    // document.getElementById('monthly-breakdown').innerHTML = breakdownHtml;
 }
