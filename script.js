@@ -207,10 +207,130 @@ async function migrateTenantIds() {
     console.log('Tenant ID migration completed');
 }
 
+// Show tenant details modal
+function showTenantDetails(tenantId) {
+    const tenant = findTenant(tenantId);
+    if (!tenant) return;
+
+    // Update tenant info
+    document.getElementById('tenant-detail-name').textContent = tenant.tenantName || 'N/A';
+    document.getElementById('tenant-detail-room').textContent = tenant.roomNumber || 'N/A';
+    document.getElementById('tenant-detail-rent').textContent = `₹${formatIndianNumber(tenant.monthlyRent || 0)}`;
+    document.getElementById('tenant-detail-due').textContent = `₹${formatIndianNumber(Math.round(calculatePreviousDue(tenant)))}`;
+    document.getElementById('tenant-detail-rate').textContent = tenant.electricityRate || 10;
+
+    // Update payment history
+    const paymentTbody = document.getElementById('payment-history-body');
+    paymentTbody.innerHTML = '';
+    
+    if (tenant.paymentHistory && tenant.paymentHistory.length > 0) {
+        tenant.paymentHistory.forEach((payment, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${formatDate(payment.date)}</td>
+                <td>₹${formatIndianNumber(Math.round(payment.amount || 0))}</td>
+                <td>${payment.type || 'Rent'}</td>
+                <td>${payment.notes || ''}</td>
+                <td class="actions">
+                    <button class="action-btn edit-payment" data-tenant-id="${tenant.id}" data-index="${index}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete delete-payment" data-tenant-id="${tenant.id}" data-index="${index}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            paymentTbody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="5" class="text-center">No payment history found</td>';
+        paymentTbody.appendChild(row);
+    }
+
+    // Update electricity readings
+    const electricityTbody = document.getElementById('electricity-readings-body');
+    electricityTbody.innerHTML = '';
+    
+    if (tenant.electricityReadings && tenant.electricityReadings.length > 1) {
+        for (let i = 1; i < tenant.electricityReadings.length; i++) {
+            const current = tenant.electricityReadings[i];
+            const prev = tenant.electricityReadings[i - 1];
+            const units = current.reading - prev.reading;
+            const amount = units * (tenant.electricityRate || 10);
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${formatDate(current.date)}</td>
+                <td>${current.reading}</td>
+                <td>${units}</td>
+                <td>₹${formatIndianNumber(Math.round(amount))}</td>
+            `;
+            electricityTbody.appendChild(row);
+        }
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="4" class="text-center">No electricity readings available</td>';
+        electricityTbody.appendChild(row);
+    }
+
+    // Show the modal
+    const modal = document.getElementById('tenant-details-modal');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close tenant details modal
+function closeTenantDetails() {
+    const modal = document.getElementById('tenant-details-modal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Add event listeners for tenant details modal
+function setupTenantDetailsModal() {
+    // Close modal when clicking the close button
+    const closeButton = document.getElementById('close-tenant-details');
+    if (closeButton) {
+        closeButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeTenantDetails();
+        });
+    }
+
+    // Close modal when clicking outside the modal content
+    const modal = document.getElementById('tenant-details-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeTenantDetails();
+            }
+        });
+    }
+
+    // Tab switching in the modal
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active class from all buttons and contents
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button
+            button.classList.add('active');
+            
+            // Show corresponding content
+            const tabId = button.getAttribute('data-tab');
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+    });
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
     initializeNavigation();
     initializePlotTabs();
+    setupTenantDetailsModal();
     initializeTheme();
     addThemeToggle();
     addTenantStatusFilter();
@@ -855,7 +975,7 @@ function createTenantCard(tenant) {
 
     return `
         <div class="tenant-card ${isActive ? 'active-tenant' : 'past-tenant'}">
-            <h3>
+            <h3 onclick="event.stopPropagation(); showTenantDetails(${tenant.id})" style="cursor: pointer;">
                 <i class="fas fa-user"></i> ${tenant.tenantName}
                 <span class="room-number">Room ${tenant.roomNumber}</span>
                 <span class="tenant-status ${isActive ? 'active' : 'past'}">
@@ -933,37 +1053,38 @@ function createTenantCard(tenant) {
     `;
 }
 
+// ... (rest of the code remains the same)
 // Update dashboard statistics
 function updateDashboardStats() {
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
-    // Identify ACTIVE tenants (no endDate)
-    const activeTenants = tenants.filter(t => !t.endDate);
-
-    // Calculate total tenants (active only)
-    document.getElementById('total-tenants').textContent = formatIndianNumber(activeTenants.length);
+    // Include all tenants for calculations
+    const allTenants = tenants;
     
-    // Calculate total due for ACTIVE tenants only (exclude past tenants)
+    // Filter active tenants (no end date or end date is in the future) for tenant count and due
+    const activeTenants = allTenants.filter(tenant => {
+        if (!tenant.endDate) return true;
+        const endDate = new Date(tenant.endDate);
+        return endDate >= new Date();
+    });
+
+    // Calculate statistics
+    const totalTenants = activeTenants.length;
     const totalDue = activeTenants.reduce((sum, tenant) => sum + calculatePreviousDue(tenant), 0);
     
+    // Calculate total monthly rent and bill using all tenants
+    const totalMonthlyRent = allTenants.reduce((sum, tenant) => sum + (tenant.monthlyRent || 0), 0);
+    const totalMonthlyBill = allTenants.reduce((sum, tenant) => sum + calculateCurrentMonthBill(tenant), 0);
+
+    document.getElementById('total-tenants').textContent = formatIndianNumber(totalTenants);
     document.getElementById('total-rent').textContent = `₹${formatIndianNumber(Math.round(totalDue))}`;
+    document.getElementById('total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyRent))}`;
+    document.getElementById('total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyBill))}`;
     
     // Add current month payments calculation
     calculateCurrentMonthPayments();
-
-    // Calculate total monthly rent
-    const totalMonthlyRent = activeTenants.reduce((sum, tenant) => {
-        return sum + (tenant.monthlyRent || 0);
-    }, 0);
-    document.getElementById('total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyRent))}`;
-
-    // Calculate total monthly bill
-    const totalMonthlyBill = activeTenants.reduce((sum, tenant) => {
-        return sum + calculateCurrentMonthBill(tenant);
-    }, 0);
-    document.getElementById('total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyBill))}`;
 
     // Update combined stats
     updateCombinedStats();
@@ -2005,8 +2126,8 @@ function calculateCurrentMonthPayments() {
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
-    // Calculate total payments from all ACTIVE tenants' payment histories
-    tenants.filter(t => !t.endDate).forEach(tenant => {
+    // Calculate total payments from all tenants' (both active and past) payment histories
+    tenants.forEach(tenant => {
         if (tenant.paymentHistory) {
             tenant.paymentHistory.forEach(payment => {
                 const paymentDate = new Date(payment.date);
@@ -2097,23 +2218,27 @@ function updateCombinedStats() {
         const plotDue = activeTenants.reduce((sum, tenant) => sum + calculatePreviousDue(tenant), 0);
         combinedDue += plotDue;
 
-        // Calculate monthly rent for this plot
-        const plotMonthlyRent = activeTenants.reduce((sum, tenant) => {
+        // Get all tenants for this plot
+        const plotKey = getPlotStorageKey(plot);
+        const allTenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
+        
+        // Calculate monthly rent for this plot (all tenants)
+        const plotMonthlyRent = allTenants.reduce((sum, tenant) => {
             const rent = tenant.monthlyRent || 0;
             return sum + rent;
         }, 0);
         combinedMonthlyRent += plotMonthlyRent;
 
-        // Calculate monthly bill for this plot
-        const plotMonthlyBill = activeTenants.reduce((sum, tenant) => {
+        // Calculate monthly bill for this plot (all tenants)
+        const plotMonthlyBill = allTenants.reduce((sum, tenant) => {
             const bill = calculateCurrentMonthBill(tenant);
             return sum + bill;
         }, 0);
         combinedMonthlyBill += plotMonthlyBill;
 
-        // Calculate current month payments for this plot
+        // Calculate current month payments for this plot (including both active and past tenants)
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const plotPayments = activeTenants.reduce((sum, tenant) => {
+        const plotPayments = tenants.reduce((sum, tenant) => {
             const tenantPayments = tenant.paymentHistory || [];
             const currentMonthPayments = tenantPayments
                 .filter(payment => payment.date.startsWith(currentMonth))
