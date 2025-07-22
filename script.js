@@ -755,16 +755,18 @@ function calculateMonthsDifference(startDate, endDate = new Date()) {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // Basic month difference (without day adjustment)
-    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    let years = end.getFullYear() - start.getFullYear();
+    let months = end.getMonth() - start.getMonth();
+    let days = end.getDate() - start.getDate();
 
-    // If the current day-of-month is past the start day, we have completed the next month
-    if (end.getDate() >= start.getDate()) {
-        months += 1;
+    if (days < 0) {
+        months--;
     }
 
-    // Ensure at least 1 month is counted for any stay that has started
-    return Math.max(1, months);
+    let totalMonths = years * 12 + months;
+
+    // Return number of full cycles, ensuring at least one month is counted if tenancy has started.
+    return Math.max(0, totalMonths) + 1;
 }
 
 // Calculate total electricity bill for a tenant
@@ -1199,16 +1201,16 @@ function handleSearch(e) {
 function calculatePreviousDue(tenant) {
     // If tenant is vacated (has an endDate) we should not include rent after that date
     const effectiveEnd = tenant.endDate ? new Date(tenant.endDate) : new Date();
-    const totalMonths = calculateMonthsDifference(tenant.startDate, effectiveEnd);
-
-    // Recalculate total rent using history
+    // Recalculate total rent using history, based on rent cycles from start date
     let totalRentDue = 0;
     const start = new Date(tenant.startDate);
     const end = effectiveEnd;
-    let cur = new Date(start.getFullYear(), start.getMonth(), 1);
-    while (cur <= end) {
-        totalRentDue += getRentForMonth(tenant, cur.getFullYear(), cur.getMonth());
-        cur.setMonth(cur.getMonth()+1);
+
+    let rentDueDate = new Date(start);
+
+    while (rentDueDate <= end) {
+        totalRentDue += getRentForMonth(tenant, rentDueDate.getFullYear(), rentDueDate.getMonth());
+        rentDueDate.setMonth(rentDueDate.getMonth() + 1);
     }
     const totalElectricityDue = calculateTotalElectricityBill(tenant);
     const totalPaymentsMade = calculateTotalPayments(tenant);
