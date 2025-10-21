@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,8 +11,9 @@
     <meta name="author" content="Rent Management System">
     <meta name="theme-color" content="#3b82f6" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0b132b" media="(prefers-color-scheme: dark)">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com 'sha256-0YmAh7tKVRqDBmOyGB1pu1l8WgYebO26EBrhcfyo6MA=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'">
-    
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'">
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
@@ -24,19 +26,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Theme Initialization -->
-    <script>
-        (function() {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.documentElement.setAttribute('data-theme', savedTheme);
-            } else {
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-            }
-        })();
-    </script>
+    <!-- Theme Initialization moved to script.js -->
 </head>
+
 <body>
     <!-- PWA install banner -->
     <div id="install-banner" style="display:none" class="install-banner">
@@ -46,19 +38,23 @@
     </div>
     <div class="container">
         <div class="plot-tabs" role="tablist" aria-label="Plots">
-            <button class="plot-tab active" role="tab" aria-selected="true" aria-controls="panel-home" id="tab-home" tabindex="0" data-plot="home">
+            <button class="plot-tab active" role="tab" aria-selected="true" aria-controls="panel-home" id="tab-home"
+                tabindex="0" data-plot="home">
                 <i class="fas fa-home"></i>
                 Home
             </button>
-            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-baba" id="tab-baba" tabindex="-1" data-plot="baba">
+            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-baba" id="tab-baba"
+                tabindex="-1" data-plot="baba">
                 <i class="fas fa-building"></i>
                 Baba
             </button>
-            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-shop" id="tab-shop" tabindex="-1" data-plot="shop">
+            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-shop" id="tab-shop"
+                tabindex="-1" data-plot="shop">
                 <i class="fas fa-store"></i>
                 Shop
             </button>
-            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-others" id="tab-others" tabindex="-1" data-plot="others">
+            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-others" id="tab-others"
+                tabindex="-1" data-plot="others">
                 <i class="fas fa-ellipsis-h"></i>
                 Others
             </button>
@@ -182,7 +178,8 @@
                             </div>
                             <div class="form-group">
                                 <label for="tenant-name">Tenant Name:</label>
-                                <input type="text" id="tenant-name" required autocomplete="name" autocapitalize="words" spellcheck="false">
+                                <input type="text" id="tenant-name" required autocomplete="name" autocapitalize="words"
+                                    spellcheck="false">
                             </div>
                         </div>
                         <div class="form-row">
@@ -192,27 +189,32 @@
                             </div>
                             <div class="form-group">
                                 <label for="monthly-rent">Monthly Rent:</label>
-                                <input type="number" id="monthly-rent" required min="0" step="0.01" inputmode="decimal" autocomplete="transaction-amount">
+                                <input type="number" id="monthly-rent" required min="0" step="0.01" inputmode="decimal"
+                                    autocomplete="transaction-amount">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="advance-paid">Advance Paid:</label>
-                                <input type="number" id="advance-paid" required min="0" step="0.01" inputmode="decimal" autocomplete="transaction-amount">
+                                <input type="number" id="advance-paid" required min="0" step="0.01" inputmode="decimal"
+                                    autocomplete="transaction-amount">
                             </div>
                             <div class="form-group">
                                 <label for="starting-due">Starting Due Amount:</label>
-                                <input type="number" id="starting-due" value="0" min="0" step="0.01" inputmode="decimal" autocomplete="transaction-amount">
+                                <input type="number" id="starting-due" value="0" min="0" step="0.01" inputmode="decimal"
+                                    autocomplete="transaction-amount">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="electricity-rate">Electricity Rate (per unit):</label>
-                                <input type="number" id="electricity-rate" value="10" required min="0" step="0.01" inputmode="decimal">
+                                <input type="number" id="electricity-rate" value="10" required min="0" step="0.01"
+                                    inputmode="decimal">
                             </div>
                             <div class="form-group">
                                 <label for="starting-electricity">Starting Electricity Reading:</label>
-                                <input type="number" id="starting-electricity" required min="0" step="0.01" inputmode="decimal">
+                                <input type="number" id="starting-electricity" required min="0" step="0.01"
+                                    inputmode="decimal">
                             </div>
                         </div>
                         <button type="submit" class="submit-btn">
@@ -321,12 +323,14 @@
                         <p>Current Due: <span id="tenant-detail-due"></span></p>
                         <p>Electricity Rate: <span id="tenant-detail-rate"></span>/unit</p>
                     </div>
-                    
+
                     <div class="tabs" role="tablist" aria-label="Tenant details tabs">
-                        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="payments-tab" id="tab-payments" data-tab="payments">Payment History</button>
-                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="electricity-tab" id="tab-electricity" data-tab="electricity">Electricity Readings</button>
+                        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="payments-tab"
+                            id="tab-payments" data-tab="payments">Payment History</button>
+                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="electricity-tab"
+                            id="tab-electricity" data-tab="electricity">Electricity Readings</button>
                     </div>
-                    
+
                     <div id="payments-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-payments">
                         <div class="table-container">
                             <table id="payment-history-table">
@@ -345,7 +349,7 @@
                             </table>
                         </div>
                     </div>
-                    
+
                     <div id="electricity-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-electricity">
                         <div class="table-container">
                             <table id="electricity-readings-table">
@@ -374,4 +378,5 @@
 
     <!-- Service worker registration moved to script.js (setupServiceWorkerUpdatePrompt) -->
 </body>
-</html> 
+
+</html>

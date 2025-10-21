@@ -1,3 +1,14 @@
+// Theme Initialization - Must run immediately to prevent flash
+(function () {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    }
+})();
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAad_Ix_4Kw7dnwPpRUacXlxOZCG_HuZ-8",
@@ -402,13 +413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Ensure functions are available globally for onclick handlers
-    window.editTenant = editTenant;
-    window.recordPayment = recordPayment;
-    window.addElectricityReading = addElectricityReading;
-    window.openVacateForm = openVacateForm;
-    window.deleteTenant = deleteTenant;
-    window.editElectricityReading = editElectricityReading;
+
 });
 
 // Set up periodic data refresh with intelligent caching
@@ -664,6 +669,55 @@ function setupEventListeners() {
     // Add event listener for window unload to ensure data is saved
     window.addEventListener('beforeunload', () => {
         saveAllData();
+    });
+
+    // Add event delegation for tenant action buttons
+    document.addEventListener('click', (e) => {
+        const button = e.target.closest('button[data-action]');
+        if (!button) return;
+
+        const action = button.getAttribute('data-action');
+        const tenantId = parseInt(button.getAttribute('data-tenant-id'));
+        const readingIndex = button.getAttribute('data-reading-index');
+        const paymentIndex = button.getAttribute('data-payment-index');
+
+
+
+        switch (action) {
+            case 'edit':
+                editTenant(tenantId);
+                break;
+            case 'add-reading':
+                addElectricityReading(tenantId);
+                break;
+            case 'record-payment':
+                recordPayment(tenantId);
+                break;
+            case 'vacate':
+                openVacateForm(tenantId);
+                break;
+            case 'delete':
+                deleteTenant(tenantId);
+                break;
+            case 'edit-reading':
+                editElectricityReading(tenantId, parseInt(readingIndex));
+                break;
+            case 'edit-payment':
+                editPayment(tenantId, parseInt(paymentIndex));
+                break;
+            case 'delete-payment':
+                deletePayment(tenantId, parseInt(paymentIndex));
+                break;
+            case 'close-payment-form':
+                closePaymentForm();
+                break;
+            case 'close-edit-form':
+                closeEditForm();
+                break;
+            case 'close-add-tenant-form':
+                closeAddTenantForm();
+                break;
+        }
     });
 
     // Delegated expand/collapse at document level so it survives tab switches
@@ -1023,7 +1077,6 @@ async function handleDataImport(event) {
 
 // Display Functions
 function createTenantCard(tenant) {
-    console.log('Creating tenant card for:', tenant.id, tenant.tenantName);
     const monthsSinceStart = calculateMonthsDifference(tenant.startDate);
     const currentMonthBill = calculateCurrentMonthBill(tenant);
     const totalElectricityBill = calculateTotalElectricityBill(tenant);
@@ -1072,7 +1125,7 @@ function createTenantCard(tenant) {
                     <p>
                         <strong>Start Reading:</strong> 
                         ${startReading.reading} (${startReading.date === 'N/A' ? 'N/A' : formatDate(startReading.date)})
-                        <button onclick="editElectricityReading(${tenant.id}, 0)" class="inline-edit-btn" title="Edit Start Reading">
+                        <button data-action="edit-reading" data-tenant-id="${tenant.id}" data-reading-index="0" class="inline-edit-btn" title="Edit Start Reading">
                             <i class="fas fa-edit"></i>
                         </button>
                     </p>
@@ -1080,7 +1133,7 @@ function createTenantCard(tenant) {
                         <strong>Previous Reading:</strong> 
                         ${previousReading.reading} (${previousReading.date === 'N/A' ? 'N/A' : formatDate(previousReading.date)})
                         ${tenant.electricityReadings.length > 1 ? `
-                            <button onclick="editElectricityReading(${tenant.id}, ${tenant.electricityReadings.length - 2})" class="inline-edit-btn" title="Edit Previous Reading">
+                            <button data-action="edit-reading" data-tenant-id="${tenant.id}" data-reading-index="${tenant.electricityReadings.length - 2}" class="inline-edit-btn" title="Edit Previous Reading">
                                 <i class="fas fa-edit"></i>
                             </button>
                         ` : ''}
@@ -1089,7 +1142,7 @@ function createTenantCard(tenant) {
                         <strong>Latest Reading:</strong> 
                         ${lastReading.reading} (${lastReading.date === 'N/A' ? 'N/A' : formatDate(lastReading.date)})
                         ${tenant.electricityReadings.length > 0 ? `
-                            <button onclick="editElectricityReading(${tenant.id}, ${tenant.electricityReadings.length - 1})" class="inline-edit-btn" title="Edit Latest Reading">
+                            <button data-action="edit-reading" data-tenant-id="${tenant.id}" data-reading-index="${tenant.electricityReadings.length - 1}" class="inline-edit-btn" title="Edit Latest Reading">
                                 <i class="fas fa-edit"></i>
                             </button>
                         ` : ''}
@@ -1099,21 +1152,21 @@ function createTenantCard(tenant) {
                 </div>
             </div>
             <div class="tenant-actions">
-                <button onclick="editTenant(${tenant.id})" class="edit-btn">
+                <button data-action="edit" data-tenant-id="${tenant.id}" class="edit-btn">
                     <i class="fas fa-edit"></i> Edit
                 </button>
                 ${isActive ? `
-                    <button onclick="addElectricityReading(${tenant.id})" class="submit-btn">
+                    <button data-action="add-reading" data-tenant-id="${tenant.id}" class="submit-btn">
                         <i class="fas fa-bolt"></i> Add Reading
                     </button>
-                    <button onclick="recordPayment(${tenant.id})" class="submit-btn">
+                    <button data-action="record-payment" data-tenant-id="${tenant.id}" class="submit-btn">
                         <i class="fas fa-money-bill-wave"></i> Record Payment
                     </button>
-                    <button onclick="openVacateForm(${tenant.id})" class="submit-btn">
+                    <button data-action="vacate" data-tenant-id="${tenant.id}" class="submit-btn">
                         <i class="fas fa-sign-out-alt"></i> Vacate
                     </button>
                 ` : ''}
-                <button onclick="deleteTenant(${tenant.id})" class="delete-btn">
+                <button data-action="delete" data-tenant-id="${tenant.id}" class="delete-btn">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -1215,7 +1268,6 @@ async function handleTenantFormSubmit(e) {
 
 // Update the display function with improved tenant information
 function displayTenants(tenants) {
-    console.log('Displaying tenants:', tenants.length, tenants);
     const tenantsList = document.getElementById('tenants-list');
     tenantsList.innerHTML = '';
 
@@ -1245,7 +1297,6 @@ function displayTenants(tenants) {
     }
 
     list.forEach(tenant => {
-        console.log('Processing tenant for display:', tenant.id, typeof tenant.id, tenant.tenantName);
         const wrapper = document.createElement('div');
         wrapper.innerHTML = createTenantCard(tenant);
         const card = wrapper.firstElementChild;
@@ -1333,7 +1384,6 @@ function updatePreviousDueWithNewReading(tenant) {
 
 // Record payment
 function recordPayment(tenantId) {
-    console.log('recordPayment called with tenantId:', tenantId);
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
@@ -1364,7 +1414,7 @@ function recordPayment(tenantId) {
         </div>
         <div class="form-actions">
             <button type="submit">Record Payment</button>
-            <button type="button" onclick="closePaymentForm()">Cancel</button>
+            <button type="button" data-action="close-payment-form">Cancel</button>
         </div>
     `;
 
@@ -1407,7 +1457,6 @@ function closePaymentForm() {
 
 // Delete tenant
 async function deleteTenant(tenantId) {
-    console.log('deleteTenant called with tenantId:', tenantId);
     if (!confirm('Are you sure you want to delete this tenant?')) return;
 
     const currentPlot = getCurrentPlot();
@@ -1528,10 +1577,10 @@ function loadPaymentHistory() {
                     <td>${payment.roomNumber}</td>
                     <td>₹${formatIndianNumber(Math.round(payment.amount))}</td>
                     <td>
-                        <button onclick="editPayment(${payment.tenantId}, ${payment.paymentIndex})" class="edit-btn">
+                        <button data-action="edit-payment" data-tenant-id="${payment.tenantId}" data-payment-index="${payment.paymentIndex}" class="edit-btn">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button onclick="deletePayment(${payment.tenantId}, ${payment.paymentIndex})" class="delete-btn">
+                        <button data-action="delete-payment" data-tenant-id="${payment.tenantId}" data-payment-index="${payment.paymentIndex}" class="delete-btn">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -1575,7 +1624,7 @@ async function editPayment(tenantId, paymentIndex) {
         </div>
         <div class="form-actions">
             <button type="submit">Update Payment</button>
-            <button type="button" onclick="closePaymentForm()">Cancel</button>
+            <button type="button" data-action="close-payment-form">Cancel</button>
         </div>
     `;
 
@@ -1688,7 +1737,6 @@ async function checkFirebaseRules() {
 
 // Edit tenant
 function editTenant(tenantId) {
-    console.log('editTenant called with tenantId:', tenantId);
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
@@ -1711,7 +1759,7 @@ function editTenant(tenantId) {
         <div class="edit-form-container">
             <div class="edit-form-header">
                 <h3>Edit Tenant Details</h3>
-                <button type="button" class="close-btn" onclick="closeEditForm()">
+                <button type="button" class="close-btn" data-action="close-edit-form">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1750,7 +1798,7 @@ function editTenant(tenantId) {
                 </div>
             </div>
             <div class="edit-form-footer">
-                <button type="button" class="cancel-btn" onclick="closeEditForm()">
+                <button type="button" class="cancel-btn" data-action="close-edit-form">
                     <i class="fas fa-times"></i> Cancel
                 </button>
                 <button type="submit" class="submit-btn">
@@ -1790,6 +1838,14 @@ function closeEditForm() {
     const editForm = document.querySelector('.edit-form');
     if (editForm) {
         editForm.remove();
+    }
+}
+
+// Close add tenant form
+function closeAddTenantForm() {
+    const addForm = document.querySelector('.add-tenant-form');
+    if (addForm) {
+        addForm.remove();
     }
 }
 
@@ -1910,7 +1966,6 @@ function calculateTotalAmountDue(tenant) {
 
 // Add electricity reading with validation
 async function addElectricityReading(tenantId) {
-    console.log('addElectricityReading called with tenantId:', tenantId);
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
@@ -1998,7 +2053,7 @@ function addNewTenant() {
         </div>
         <div class="form-actions">
             <button type="submit">Add Tenant</button>
-            <button type="button" onclick="closeAddTenantForm()">Cancel</button>
+            <button type="button" data-action="close-add-tenant-form">Cancel</button>
         </div>
     `;
 
@@ -2112,7 +2167,6 @@ function handleDataExport() {
 // ---------- Vacate Tenant Helpers ----------
 // Open a small form with a proper date selector for vacating a tenant
 function openVacateForm(tenantId) {
-    console.log('openVacateForm called with tenantId:', tenantId);
     // Remove any existing vacate form
     const existing = document.querySelector('.vacate-form');
     if (existing) existing.remove();
