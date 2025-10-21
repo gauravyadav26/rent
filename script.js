@@ -136,6 +136,7 @@ function debounce(func, wait) {
 
 // Add at the top of the file after Firebase config
 let currentSearchTerm = '';
+let tenantStatusFilter = 'active';
 
 // Add PWA install prompt
 let deferredPrompt;
@@ -489,15 +490,8 @@ function loadTenants() {
         tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
     ) : tenants;
     
-    // Display the tenants
-    const tenantsList = document.getElementById('tenants-list');
-    if (tenantsList) {
-        if (filteredTenants.length === 0) {
-            tenantsList.innerHTML = '<div class="no-tenants">No tenants found for this plot.</div>';
-        } else {
-            tenantsList.innerHTML = filteredTenants.map(tenant => createTenantCard(tenant)).join('');
-        }
-    }
+    // Display using central renderer (applies status filter + sorting)
+    displayTenants(filteredTenants);
     
     // Update tenant select dropdown
     updateTenantSelect(tenants);
@@ -627,6 +621,28 @@ function setupEventListeners() {
     // Add event listener for window unload to ensure data is saved
     window.addEventListener('beforeunload', () => {
         saveAllData();
+    });
+
+    // Delegated expand/collapse at document level so it survives tab switches
+    document.addEventListener('click', (e) => {
+        // Only act when Tenants section is visible
+        const tenantsSection = document.getElementById('tenants');
+        if (!tenantsSection || tenantsSection.style.display !== 'block') return;
+
+        // Toggle button inside header
+        const toggleBtn = e.target.closest('.toggle-card');
+        if (toggleBtn && tenantsSection.contains(toggleBtn)) {
+            e.stopPropagation();
+            const card = toggleBtn.closest('.tenant-card');
+            if (card) card.classList.toggle('expanded');
+            return;
+        }
+
+        // Click anywhere on card except on actionable controls
+        const card = e.target.closest('.tenant-card');
+        if (!card || !tenantsSection.contains(card)) return;
+        if (e.target.closest('.tenant-actions') || e.target.closest('button') || e.target.closest('a') || e.target.closest('.open-details')) return;
+        card.classList.toggle('expanded');
     });
 }
 
@@ -977,12 +993,18 @@ function createTenantCard(tenant) {
 
     return `
         <div class="tenant-card ${isActive ? 'active-tenant' : 'past-tenant'}">
-            <h3 onclick="event.stopPropagation(); showTenantDetails(${tenant.id})" style="cursor: pointer;">
+            <h3 style="cursor: pointer;">
                 <i class="fas fa-user"></i> ${tenant.tenantName}
                 <span class="room-number">Room ${tenant.roomNumber}</span>
                 <span class="tenant-status ${isActive ? 'active' : 'past'}">
                     ${isActive ? 'Active' : 'Past'}
                 </span>
+                <button class="toggle-card" title="Expand/Collapse" aria-label="Expand or collapse tenant info">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <button class="open-details" data-tenant-id="${tenant.id}" title="Open details" aria-label="Open tenant details">
+                    <i class="fas fa-external-link-alt"></i>
+                </button>
             </h3>
             <div class="tenant-info">
                 <div class="info-section" data-section="basic-info">
@@ -1152,15 +1174,47 @@ function displayTenants(tenants) {
     const tenantsList = document.getElementById('tenants-list');
     tenantsList.innerHTML = '';
 
-    if (tenants.length === 0) {
+    // Apply status filter preference
+    let list = tenants;
+    if (tenantStatusFilter === 'active') {
+        list = list.filter(t => !t.endDate);
+    } else if (tenantStatusFilter === 'past') {
+        list = list.filter(t => !!t.endDate);
+    }
+
+    // Sort by room number (numeric when possible, else string locale compare)
+    list.sort((a, b) => {
+        const ax = parseFloat(a.roomNumber);
+        const bx = parseFloat(b.roomNumber);
+        const aIsNum = !isNaN(ax);
+        const bIsNum = !isNaN(bx);
+        if (aIsNum && bIsNum) return ax - bx;
+        if (aIsNum) return -1;
+        if (bIsNum) return 1;
+        return String(a.roomNumber).localeCompare(String(b.roomNumber), undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    if (list.length === 0) {
         tenantsList.innerHTML = '<p class="no-tenants">No tenants found.</p>';
         return;
     }
 
-    tenants.forEach(tenant => {
-        const tenantCard = document.createElement('div');
-        tenantCard.innerHTML = createTenantCard(tenant);
-        tenantsList.appendChild(tenantCard.firstElementChild);
+    list.forEach(tenant => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = createTenantCard(tenant);
+        const card = wrapper.firstElementChild;
+
+        // Open details modal on details button
+        const detailsBtn = card.querySelector('.open-details');
+        if (detailsBtn) {
+            detailsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = detailsBtn.getAttribute('data-tenant-id');
+                showTenantDetails(Number(id));
+            });
+        }
+
+        tenantsList.appendChild(card);
     });
 }
 
@@ -1951,11 +2005,13 @@ function addTenantStatusFilter() {
 
             // Filter tenants
             const status = button.getAttribute('data-status');
+            tenantStatusFilter = status; // persist preference
             filterTenants(status);
         });
     });
 
     // Show active tenants by default
+    tenantStatusFilter = 'active';
     filterTenants('active');
 }
 
@@ -1965,14 +2021,8 @@ function filterTenants(status) {
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
     
-    let filteredTenants = tenants;
-    if (status === 'active') {
-        filteredTenants = tenants.filter(tenant => !tenant.endDate);
-    } else if (status === 'past') {
-        filteredTenants = tenants.filter(tenant => tenant.endDate);
-    }
-    
-    displayTenants(filteredTenants);
+    tenantStatusFilter = status;
+    displayTenants(tenants);
 }
 
 // Data Management Functions
