@@ -1488,21 +1488,25 @@ td {
     opacity: 0.8;
 }
 
-.tenant-status {
-    font-size: 0.8em;
-    padding: 4px 8px;
-    border-radius: 4px;
-    margin-left: 10px;
+.tenant-status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 0.5rem;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
-.tenant-status.active {
+.tenant-status-indicator.active {
     background: var(--success-color);
-    color: white;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
-.tenant-status.past {
+.tenant-status-indicator.past {
     background: var(--text-secondary);
-    color: white;
+    opacity: 0.6;
 }
 
 /* Edit Form Styles */
@@ -2705,27 +2709,7 @@ tbody tr:hover {
     transform: translateY(-2px);
 }
 
-/* Tenant Controls */
-.tenant-controls {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-}
 
-.filter-controls {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.filter-controls select {
-    padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.25rem;
-    background: var(--card-background);
-    color: var(--text-primary);
-    min-width: 120px;
-}
 
 /* Notification System */
 .notification-container {
@@ -2786,37 +2770,7 @@ tbody tr:hover {
     font-size: 0.9rem;
 }
 
-/* Breadcrumb */
-.breadcrumb {
-    margin-bottom: 1.5rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
 
-.breadcrumb-list {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.breadcrumb-item {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.breadcrumb-item:not(:last-child)::after {
-    content: '/';
-    margin-left: 0.5rem;
-    color: var(--text-secondary);
-}
-
-.breadcrumb-item:last-child {
-    color: var(--text-primary);
-    font-weight: 500;
-}
 
 /* Loading States */
 .loading-state {
@@ -2992,40 +2946,7 @@ tbody tr:hover {
     transform: none;
 }
 
-/* Status Indicators */
-.tenant-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 1rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
 
-.tenant-status.active {
-    background: rgba(34, 197, 94, 0.1);
-    color: var(--success-color);
-}
-
-.tenant-status.overdue {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger-color);
-}
-
-.tenant-status.paid {
-    background: rgba(59, 130, 246, 0.1);
-    color: var(--primary-color);
-}
-
-.tenant-status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-}
 
 /* Animations */
 @keyframes slideInRight {
@@ -3057,14 +2978,7 @@ tbody tr:hover {
         justify-content: center;
     }
     
-    .tenant-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .filter-controls {
-        justify-content: space-between;
-    }
+
     
     .progress-steps {
         gap: 1rem;
@@ -3171,4 +3085,453 @@ th {
     display: flex;
     align-items: center;
     gap: 0.25rem;
+}/* =
+===================== Mobile Improvements ====================== */
+
+/* Enhanced Mobile Responsiveness */
+@media (max-width: 768px) {
+    /* Container and layout improvements */
+    .container {
+        padding: 0.5rem;
+    }
+    
+    /* Plot tabs mobile optimization */
+    .plot-tabs {
+        margin-top: 2.5rem;
+        padding: 0.5rem;
+        gap: 0.25rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    
+    .plot-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .plot-tab {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        min-width: fit-content;
+        white-space: nowrap;
+    }
+    
+    /* Sidebar mobile improvements */
+    .sidebar {
+        position: fixed;
+        left: -282px;
+        top: 0;
+        width: 250px;
+        z-index: 100;
+        background: var(--card-background);
+        padding-top: 3rem;
+        height: 100vh;
+        box-shadow: var(--shadow-lg);
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.active {
+        left: 0;
+    }
+    
+    .sidebar-toggle {
+        display: block;
+    }
+    
+    /* Content area mobile */
+    .content-area {
+        margin-left: 0;
+        padding: 0.75rem;
+    }
+    
+
+    
+    /* Dashboard mobile improvements */
+    .dashboard-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .quick-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .quick-action-btn {
+        flex: 1;
+        min-width: 120px;
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Stats cards mobile */
+    .summary-stats {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .stat-card i {
+        font-size: 1.5rem;
+        padding: 0.5rem;
+    }
+    
+    .stat-card span {
+        font-size: 1.1rem;
+        display: block;
+        margin: 0.5rem 0;
+    }
+    
+    .stat-card label {
+        font-size: 0.8rem;
+    }
+    
+    /* Tenant cards mobile optimization */
+    .tenant-card {
+        margin-bottom: 0.75rem;
+        padding: 1rem;
+    }
+    
+    .tenant-card h3 {
+        font-size: 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .room-number {
+        order: 1;
+        margin-left: 0 !important;
+    }
+    
+    .tenant-status-indicator {
+        order: 2;
+        margin-left: auto;
+    }
+    
+    /* Tenant info mobile layout */
+    .tenant-info {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .info-section {
+        padding: 0.75rem;
+    }
+    
+    .info-section h4 {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-section p {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        margin: 0.25rem 0;
+    }
+    
+    /* Tenant actions mobile */
+    .tenant-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    
+    .tenant-actions button {
+        flex: none;
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+        justify-content: center;
+    }
+    
+    /* Search bar mobile */
+    .search-bar {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .search-bar input {
+        width: 100%;
+        padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+        font-size: 1rem;
+        border-radius: 0.5rem;
+    }
+    
+    /* Form improvements mobile */
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        font-size: 1rem;
+        border-radius: 0.5rem;
+    }
+    
+    /* Progress steps mobile */
+    .progress-steps {
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .step-label {
+        display: none;
+    }
+    
+    .step-number {
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Modal mobile improvements */
+    .modal-content {
+        width: 95%;
+        max-width: none;
+        margin: 1rem;
+        max-height: calc(100vh - 2rem);
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    /* Table mobile improvements */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        min-width: 600px;
+        font-size: 0.85rem;
+    }
+    
+    th, td {
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+    }
+    
+    /* Payment filters mobile */
+    .payment-filters {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+    
+    .payment-filters select,
+    .payment-filters input {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+    }
+    
+    /* Monthly history mobile */
+    .monthly-stats {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .monthly-stat-card {
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    /* Data management mobile */
+    .data-management-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .action-btn {
+        width: 100%;
+        padding: 0.75rem;
+        justify-content: center;
+    }
+    
+    /* Notification mobile */
+    .notification-container {
+        left: 0.5rem;
+        right: 0.5rem;
+        top: 0.5rem;
+    }
+    
+    .notification {
+        min-width: auto;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Theme toggle mobile */
+    .theme-toggle {
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 36px;
+        height: 18px;
+    }
+    
+    .theme-toggle::before {
+        width: 14px;
+        height: 14px;
+    }
+    
+    [data-theme="dark"] .theme-toggle::before {
+        transform: translateX(18px);
+    }
+    
+    /* Touch improvements */
+    button, .tenant-card, .stat-card {
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Improved touch targets */
+    .nav-btn, .plot-tab, .tenant-actions button {
+        min-height: 44px;
+        touch-action: manipulation;
+    }
+    
+    /* Prevent zoom on input focus */
+    input, select, textarea {
+        font-size: 16px;
+    }
+    
+    /* Collapsible sections on mobile */
+    .info-section[data-section="basic-info"],
+    .info-section[data-section="electricity"] {
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .info-section[data-section="basic-info"] h4,
+    .info-section[data-section="electricity"] h4 {
+        cursor: pointer;
+        padding: 0.75rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: var(--background-color);
+        border-bottom: 1px solid var(--border-color);
+        user-select: none;
+    }
+    
+    .info-section[data-section="basic-info"] h4::after,
+    .info-section[data-section="electricity"] h4::after {
+        content: '\f107';
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        transition: transform 0.3s ease;
+        font-size: 0.8rem;
+    }
+    
+    .info-section[data-section="basic-info"].expanded h4::after,
+    .info-section[data-section="electricity"].expanded h4::after {
+        transform: rotate(180deg);
+    }
+    
+    .info-section[data-section="basic-info"] > *:not(h4),
+    .info-section[data-section="electricity"] > *:not(h4) {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        padding: 0 0.75rem;
+        margin: 0;
+    }
+    
+    .info-section[data-section="basic-info"].expanded > *:not(h4),
+    .info-section[data-section="electricity"].expanded > *:not(h4) {
+        max-height: 500px;
+        padding: 0.75rem;
+        margin: 0.25rem 0;
+    }
+}
+
+/* Extra small devices (phones in portrait) */
+@media (max-width: 480px) {
+    .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .tenant-card h3 {
+        font-size: 0.9rem;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+    
+    .quick-action-btn {
+        width: 100%;
+    }
+    
+    .modal-content {
+        width: 98%;
+        margin: 0.5rem;
+    }
+    
+    .plot-tab {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+    }
+    
+    .nav-btn {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Landscape orientation improvements */
+@media (max-width: 768px) and (orientation: landscape) {
+    .summary-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .tenant-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .tenant-actions button {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .tenant-status-indicator {
+        border-width: 1px;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

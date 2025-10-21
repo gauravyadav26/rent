@@ -95,17 +95,7 @@
             </div>
 
             <div class="content-area">
-                <!-- Breadcrumb Navigation -->
-                <nav class="breadcrumb" aria-label="Breadcrumb">
-                    <ol class="breadcrumb-list">
-                        <li class="breadcrumb-item">
-                            <span id="current-plot-name">Home</span>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <span id="current-section-name">Dashboard</span>
-                        </li>
-                    </ol>
-                </nav>
+
                 <!-- Summary Section -->
                 <section id="summary" class="section">
                     <div class="dashboard-header">
@@ -183,25 +173,9 @@
                 <section id="tenants" class="section" role="region" aria-labelledby="tab-tenants">
                     <div class="section-header">
                         <h2>Tenants</h2>
-                        <div class="tenant-controls">
-                            <div class="search-bar">
-                                <i class="fas fa-search"></i>
-                                <input type="text" id="search-tenant" placeholder="Search by name or room...">
-                            </div>
-                            <div class="filter-controls">
-                                <select id="tenant-status-filter">
-                                    <option value="all">All Tenants</option>
-                                    <option value="active">Active</option>
-                                    <option value="overdue">Overdue</option>
-                                    <option value="paid">Paid Up</option>
-                                </select>
-                                <select id="tenant-sort">
-                                    <option value="name">Sort by Name</option>
-                                    <option value="room">Sort by Room</option>
-                                    <option value="due">Sort by Due Amount</option>
-                                    <option value="date">Sort by Start Date</option>
-                                </select>
-                            </div>
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="search-tenant" placeholder="Search by name or room...">
                         </div>
                     </div>
                     <div class="tenants-list" id="tenants-list">
