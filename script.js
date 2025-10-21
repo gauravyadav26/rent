@@ -641,7 +641,12 @@ function initializePlotTabs() {
 function setupEventListeners() {
     // Tenant form submission
     const tenantForm = document.getElementById('tenant-form');
-    tenantForm.addEventListener('submit', handleTenantFormSubmit);
+    if (tenantForm) {
+        console.log('Tenant form found, adding event listener');
+        tenantForm.addEventListener('submit', handleTenantFormSubmit);
+    } else {
+        console.error('Tenant form not found!');
+    }
 
     // Search functionality
     const searchInput = document.getElementById('search-tenant');
@@ -1222,22 +1227,45 @@ function formatDate(dateString) {
 
 // Handle tenant form submission
 async function handleTenantFormSubmit(e) {
+    console.log('Form submitted!', e);
     e.preventDefault();
     
     try {
         const currentPlot = getCurrentPlot();
+        
+        // Get form elements
+        const roomNumberEl = document.getElementById('room-number');
+        const tenantNameEl = document.getElementById('tenant-name');
+        const startDateEl = document.getElementById('start-date');
+        const advancePaidEl = document.getElementById('advance-paid');
+        const monthlyRentEl = document.getElementById('monthly-rent');
+        const startingDueEl = document.getElementById('starting-due');
+        const electricityRateEl = document.getElementById('electricity-rate');
+        const startingElectricityEl = document.getElementById('starting-electricity');
+        
+        console.log('Form elements found:', {
+            roomNumber: !!roomNumberEl,
+            tenantName: !!tenantNameEl,
+            startDate: !!startDateEl,
+            advancePaid: !!advancePaidEl,
+            monthlyRent: !!monthlyRentEl,
+            startingDue: !!startingDueEl,
+            electricityRate: !!electricityRateEl,
+            startingElectricity: !!startingElectricityEl
+        });
+        
         const tenant = {
             id: Date.now(),
             plotName: currentPlot,
-            roomNumber: document.getElementById('room-number').value,
-            tenantName: document.getElementById('tenant-name').value,
-            startDate: document.getElementById('start-date').value,
-            advancePaid: parseFloat(document.getElementById('advance-paid').value) || 0,
-            monthlyRent: parseFloat(document.getElementById('monthly-rent').value) || 0,
-            startingDue: parseFloat(document.getElementById('starting-due').value) || 0,
-            electricityRate: parseFloat(document.getElementById('electricity-rate').value) || 10,
+            roomNumber: roomNumberEl?.value || '',
+            tenantName: tenantNameEl?.value || '',
+            startDate: startDateEl?.value || '',
+            advancePaid: parseFloat(advancePaidEl?.value) || 0,
+            monthlyRent: parseFloat(monthlyRentEl?.value) || 0,
+            startingDue: parseFloat(startingDueEl?.value) || 0,
+            electricityRate: parseFloat(electricityRateEl?.value) || 10,
             electricityReadings: [{
-                reading: parseFloat(document.getElementById('starting-electricity').value) || 0,
+                reading: parseFloat(startingElectricityEl?.value) || 0,
                 date: new Date().toISOString().split('T')[0]
             }],
             paymentHistory: [],
@@ -1245,6 +1273,8 @@ async function handleTenantFormSubmit(e) {
             lastElectricityDue: 0,
             isActive: true
         };
+        
+        console.log('Tenant data:', tenant);
 
         // Validate required fields
         if (!tenant.roomNumber || !tenant.tenantName || !tenant.startDate) {
@@ -2764,3 +2794,472 @@ function loadMonthlyHistory() {
         */
     // document.getElementById('monthly-breakdown').innerHTML = breakdownHtml;
 }
+
+// ====================== UX Enhancements ======================
+
+// Notification System
+class NotificationManager {
+    constructor() {
+        this.container = document.getElementById('notification-container');
+        this.notifications = new Map();
+        this.nextId = 1;
+    }
+
+    show(message, type = 'info', duration = 5000) {
+        const id = this.nextId++;
+        const notification = this.createNotification(id, message, type);
+        
+        this.container.appendChild(notification);
+        this.notifications.set(id, notification);
+
+        // Auto-remove after duration
+        if (duration > 0) {
+            setTimeout(() => this.remove(id), duration);
+        }
+
+        return id;
+    }
+
+    createNotification(id, message, type) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <div class="notification-header">
+                <span class="notification-title">${this.getTitle(type)}</span>
+                <button class="notification-close" data-notification-id="${id}">×</button>
+            </div>
+            <div class="notification-message">${message}</div>
+        `;
+
+        // Add close handler
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            this.remove(id);
+        });
+
+        return notification;
+    }
+
+    getTitle(type) {
+        const titles = {
+            success: 'Success',
+            error: 'Error',
+            warning: 'Warning',
+            info: 'Info'
+        };
+        return titles[type] || 'Notification';
+    }
+
+    remove(id) {
+        const notification = this.notifications.get(id);
+        if (notification) {
+            notification.style.animation = 'slideOutRight 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+                this.notifications.delete(id);
+            }, 300);
+        }
+    }
+
+    success(message, duration) {
+        return this.show(message, 'success', duration);
+    }
+
+    error(message, duration) {
+        return this.show(message, 'error', duration);
+    }
+
+    warning(message, duration) {
+        return this.show(message, 'warning', duration);
+    }
+
+    info(message, duration) {
+        return this.show(message, 'info', duration);
+    }
+}
+
+// Initialize notification manager
+const notifications = new NotificationManager();
+
+// Breadcrumb Management
+function updateBreadcrumb() {
+    const currentPlot = getCurrentPlot();
+    const activeSection = document.querySelector('.nav-btn.active');
+    
+    const plotNames = {
+        home: 'Home',
+        baba: 'Baba',
+        shop: 'Shop',
+        others: 'Others'
+    };
+    
+    const sectionNames = {
+        summary: 'Dashboard',
+        tenants: 'Tenants',
+        'add-tenant': 'Add Tenant',
+        'payment-history': 'Payment History',
+        'monthly-history': 'Monthly History',
+        'data-management': 'Data Management'
+    };
+    
+    document.getElementById('current-plot-name').textContent = plotNames[currentPlot] || currentPlot;
+    
+    if (activeSection) {
+        const sectionKey = activeSection.getAttribute('data-section');
+        document.getElementById('current-section-name').textContent = sectionNames[sectionKey] || 'Dashboard';
+    }
+}
+
+// Enhanced Loading States
+function showLoadingState(containerId) {
+    const container = document.getElementById(containerId);
+    const loadingElement = container.querySelector('.loading-state');
+    const emptyElement = container.querySelector('.empty-state');
+    
+    if (loadingElement) loadingElement.style.display = 'flex';
+    if (emptyElement) emptyElement.style.display = 'none';
+    
+    // Hide actual content
+    const contentElements = container.children;
+    for (let element of contentElements) {
+        if (!element.classList.contains('loading-state') && !element.classList.contains('empty-state')) {
+            element.style.display = 'none';
+        }
+    }
+}
+
+function hideLoadingState(containerId) {
+    const container = document.getElementById(containerId);
+    const loadingElement = container.querySelector('.loading-state');
+    
+    if (loadingElement) loadingElement.style.display = 'none';
+    
+    // Show actual content
+    const contentElements = container.children;
+    for (let element of contentElements) {
+        if (!element.classList.contains('loading-state') && !element.classList.contains('empty-state')) {
+            element.style.display = '';
+        }
+    }
+}
+
+function showEmptyState(containerId) {
+    const container = document.getElementById(containerId);
+    const emptyElement = container.querySelector('.empty-state');
+    const loadingElement = container.querySelector('.loading-state');
+    
+    if (emptyElement) emptyElement.style.display = 'flex';
+    if (loadingElement) loadingElement.style.display = 'none';
+    
+    // Hide actual content
+    const contentElements = container.children;
+    for (let element of contentElements) {
+        if (!element.classList.contains('loading-state') && !element.classList.contains('empty-state')) {
+            element.style.display = 'none';
+        }
+    }
+}
+
+// Enhanced Tenant Status
+function getTenantStatus(tenant) {
+    if (tenant.endDate) return 'past';
+    
+    const due = calculatePreviousDue(tenant);
+    const monthlyTotal = tenant.monthlyRent + calculateCurrentMonthBill(tenant);
+    
+    if (due > monthlyTotal) return 'overdue';
+    if (due <= 0) return 'paid';
+    return 'active';
+}
+
+function getStatusDisplay(status) {
+    const statusConfig = {
+        active: { label: 'Active', class: 'active', icon: 'fas fa-check-circle' },
+        overdue: { label: 'Overdue', class: 'overdue', icon: 'fas fa-exclamation-triangle' },
+        paid: { label: 'Paid Up', class: 'paid', icon: 'fas fa-star' },
+        past: { label: 'Past', class: 'past', icon: 'fas fa-history' }
+    };
+    
+    return statusConfig[status] || statusConfig.active;
+}
+
+// Enhanced Form Validation
+class FormValidator {
+    constructor(formId) {
+        this.form = document.getElementById(formId);
+        this.rules = new Map();
+        this.errors = new Map();
+    }
+
+    addRule(fieldId, validator, message) {
+        if (!this.rules.has(fieldId)) {
+            this.rules.set(fieldId, []);
+        }
+        this.rules.get(fieldId).push({ validator, message });
+    }
+
+    validate() {
+        this.errors.clear();
+        let isValid = true;
+
+        for (let [fieldId, rules] of this.rules) {
+            const field = document.getElementById(fieldId);
+            if (!field) continue;
+
+            const fieldGroup = field.closest('.form-group');
+            this.clearFieldError(fieldGroup);
+
+            for (let rule of rules) {
+                if (!rule.validator(field.value, field)) {
+                    this.setFieldError(fieldGroup, rule.message);
+                    this.errors.set(fieldId, rule.message);
+                    isValid = false;
+                    break;
+                }
+            }
+
+            if (!this.errors.has(fieldId)) {
+                this.setFieldSuccess(fieldGroup);
+            }
+        }
+
+        return isValid;
+    }
+
+    setFieldError(fieldGroup, message) {
+        fieldGroup.classList.add('error');
+        fieldGroup.classList.remove('success');
+        
+        let errorElement = fieldGroup.querySelector('.field-error');
+        if (!errorElement) {
+            errorElement = document.createElement('div');
+            errorElement.className = 'field-error';
+            fieldGroup.appendChild(errorElement);
+        }
+        
+        errorElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+    }
+
+    setFieldSuccess(fieldGroup) {
+        fieldGroup.classList.add('success');
+        fieldGroup.classList.remove('error');
+        
+        const errorElement = fieldGroup.querySelector('.field-error');
+        if (errorElement) {
+            errorElement.remove();
+        }
+    }
+
+    clearFieldError(fieldGroup) {
+        fieldGroup.classList.remove('error', 'success');
+        const errorElement = fieldGroup.querySelector('.field-error');
+        if (errorElement) {
+            errorElement.remove();
+        }
+    }
+}
+
+// Quick Actions
+function setupQuickActions() {
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-action="quick-payment"]')) {
+            showQuickPaymentModal();
+        }
+    });
+}
+
+function showQuickPaymentModal() {
+    const tenants = getTenants();
+    const activeTenants = tenants.filter(t => !t.endDate);
+    
+    if (activeTenants.length === 0) {
+        notifications.warning('No active tenants found. Add a tenant first.');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-money-bill-wave"></i> Quick Payment</h2>
+                <button class="close-btn" data-action="close-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="quick-payment-form">
+                    <div class="form-group">
+                        <label for="quick-tenant-select">Select Tenant:</label>
+                        <select id="quick-tenant-select" required>
+                            <option value="">Choose a tenant...</option>
+                            ${activeTenants.map(t => 
+                                `<option value="${t.id}">${t.tenantName} - Room ${t.roomNumber} (Due: ₹${Math.round(calculatePreviousDue(t))})</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-amount">Amount:</label>
+                        <input type="number" id="quick-amount" required min="0" step="0.01">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">Record Payment</button>
+                        <button type="button" class="cancel-btn" data-action="close-modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Handle form submission
+    modal.querySelector('#quick-payment-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tenantId = parseInt(modal.querySelector('#quick-tenant-select').value);
+        const amount = parseFloat(modal.querySelector('#quick-amount').value);
+        
+        if (tenantId && amount > 0) {
+            await recordQuickPayment(tenantId, amount);
+            modal.remove();
+        }
+    });
+
+    // Handle close
+    modal.addEventListener('click', (e) => {
+        if (e.target.closest('[data-action="close-modal"]') || e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+async function recordQuickPayment(tenantId, amount) {
+    try {
+        const tenant = findTenant(tenantId);
+        if (!tenant) {
+            notifications.error('Tenant not found');
+            return;
+        }
+
+        const payment = {
+            date: new Date().toISOString().split('T')[0],
+            amount: amount,
+            type: 'Rent',
+            notes: 'Quick payment'
+        };
+
+        if (!tenant.paymentHistory) {
+            tenant.paymentHistory = [];
+        }
+        tenant.paymentHistory.push(payment);
+
+        await saveTenant(tenant);
+        loadTenants();
+        updateDashboardStats();
+        
+        notifications.success(`Payment of ₹${amount} recorded for ${tenant.tenantName}`);
+    } catch (error) {
+        notifications.error('Failed to record payment');
+        console.error('Quick payment error:', error);
+    }
+}
+
+// Enhanced Tenant Filtering and Sorting
+function setupTenantFiltering() {
+    const statusFilter = document.getElementById('tenant-status-filter');
+    const sortSelect = document.getElementById('tenant-sort');
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', applyTenantFilters);
+    }
+    
+    if (sortSelect) {
+        sortSelect.addEventListener('change', applyTenantFilters);
+    }
+}
+
+function applyTenantFilters() {
+    const tenants = getTenants();
+    const statusFilter = document.getElementById('tenant-status-filter')?.value || 'all';
+    const sortBy = document.getElementById('tenant-sort')?.value || 'name';
+    
+    let filteredTenants = tenants;
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+        filteredTenants = tenants.filter(tenant => {
+            const status = getTenantStatus(tenant);
+            return status === statusFilter;
+        });
+    }
+    
+    // Apply search filter
+    if (currentSearchTerm) {
+        filteredTenants = filteredTenants.filter(tenant => 
+            tenant.tenantName.toLowerCase().includes(currentSearchTerm) ||
+            tenant.roomNumber.toLowerCase().includes(currentSearchTerm)
+        );
+    }
+    
+    // Apply sorting
+    filteredTenants.sort((a, b) => {
+        switch (sortBy) {
+            case 'name':
+                return a.tenantName.localeCompare(b.tenantName);
+            case 'room':
+                return a.roomNumber.localeCompare(b.roomNumber);
+            case 'due':
+                return calculatePreviousDue(b) - calculatePreviousDue(a);
+            case 'date':
+                return new Date(a.startDate) - new Date(b.startDate);
+            default:
+                return 0;
+        }
+    });
+    
+    displayTenants(filteredTenants);
+}
+
+// Initialize UX enhancements
+document.addEventListener('DOMContentLoaded', () => {
+    setupQuickActions();
+    setupTenantFiltering();
+    
+    // Update breadcrumb on navigation
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.nav-btn') || e.target.closest('.plot-tab')) {
+            setTimeout(updateBreadcrumb, 100);
+        }
+    });
+    
+    // Initial breadcrumb update
+    updateBreadcrumb();
+});
+
+// Override existing functions to use notifications
+const originalAlert = window.alert;
+window.alert = function(message) {
+    if (message.includes('successfully')) {
+        notifications.success(message);
+    } else if (message.includes('error') || message.includes('Error') || message.includes('failed')) {
+        notifications.error(message);
+    } else {
+        notifications.info(message);
+    }
+};
+
+// Enhanced displayTenants function
+const originalDisplayTenants = displayTenants;
+window.displayTenants = function(tenants) {
+    const tenantsList = document.getElementById('tenants-list');
+    
+    if (tenants.length === 0) {
+        showEmptyState('tenants-list');
+        return;
+    }
+    
+    hideLoadingState('tenants-list');
+    const emptyElement = tenantsList.querySelector('.empty-state');
+    if (emptyElement) emptyElement.style.display = 'none';
+    
+    originalDisplayTenants(tenants);
+};

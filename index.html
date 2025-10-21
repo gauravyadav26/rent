@@ -36,6 +36,9 @@
         <button id="install-btn" class="install-btn">Install</button>
         <button id="dismiss-install" class="dismiss-btn" aria-label="Dismiss">×</button>
     </div>
+    <!-- Notification System -->
+    <div id="notification-container" class="notification-container"></div>
+
     <div class="container">
         <div class="plot-tabs" role="tablist" aria-label="Plots">
             <button class="plot-tab active" role="tab" aria-selected="true" aria-controls="panel-home" id="tab-home"
@@ -65,13 +68,13 @@
                 <button class="sidebar-toggle" id="sidebar-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
-                <button class="nav-btn" data-section="tenants">
-                    <i class="fas fa-list"></i>
-                    View Tenants
-                </button>
                 <button class="nav-btn" data-section="summary">
                     <i class="fas fa-chart-pie"></i>
-                    Summary
+                    Dashboard
+                </button>
+                <button class="nav-btn" data-section="tenants">
+                    <i class="fas fa-users"></i>
+                    Tenants
                 </button>
                 <button class="nav-btn" data-section="add-tenant">
                     <i class="fas fa-user-plus"></i>
@@ -92,9 +95,32 @@
             </div>
 
             <div class="content-area">
+                <!-- Breadcrumb Navigation -->
+                <nav class="breadcrumb" aria-label="Breadcrumb">
+                    <ol class="breadcrumb-list">
+                        <li class="breadcrumb-item">
+                            <span id="current-plot-name">Home</span>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <span id="current-section-name">Dashboard</span>
+                        </li>
+                    </ol>
+                </nav>
                 <!-- Summary Section -->
                 <section id="summary" class="section">
-                    <h2><i class="fas fa-chart-pie"></i> Summary</h2>
+                    <div class="dashboard-header">
+                        <h2><i class="fas fa-chart-pie"></i> Dashboard</h2>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" data-section="add-tenant">
+                                <i class="fas fa-plus"></i>
+                                Add Tenant
+                            </button>
+                            <button class="quick-action-btn" data-action="quick-payment">
+                                <i class="fas fa-money-bill-wave"></i>
+                                Quick Payment
+                            </button>
+                        </div>
+                    </div>
                     <div class="summary-stats">
                         <div class="stat-card">
                             <i class="fas fa-users"></i>
@@ -156,13 +182,46 @@
                 <!-- View Tenants Section -->
                 <section id="tenants" class="section" role="region" aria-labelledby="tab-tenants">
                     <div class="section-header">
-                        <h2>Tenant</h2>
-                        <div class="search-bar">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="search-tenant" placeholder="Search tenant...">
+                        <h2>Tenants</h2>
+                        <div class="tenant-controls">
+                            <div class="search-bar">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="search-tenant" placeholder="Search by name or room...">
+                            </div>
+                            <div class="filter-controls">
+                                <select id="tenant-status-filter">
+                                    <option value="all">All Tenants</option>
+                                    <option value="active">Active</option>
+                                    <option value="overdue">Overdue</option>
+                                    <option value="paid">Paid Up</option>
+                                </select>
+                                <select id="tenant-sort">
+                                    <option value="name">Sort by Name</option>
+                                    <option value="room">Sort by Room</option>
+                                    <option value="due">Sort by Due Amount</option>
+                                    <option value="date">Sort by Start Date</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="tenants-list" id="tenants-list">
+                        <!-- Loading State -->
+                        <div id="tenants-loading" class="loading-state" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <p>Loading tenants...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="tenants-empty" class="empty-state" style="display: none;">
+                            <i class="fas fa-users"></i>
+                            <h3>No tenants found</h3>
+                            <p>Get started by adding your first tenant</p>
+                            <button class="empty-action-btn" data-section="add-tenant">
+                                <i class="fas fa-plus"></i>
+                                Add First Tenant
+                            </button>
+                        </div>
+
                         <!-- Tenants will be displayed here -->
                     </div>
                 </section>
@@ -170,7 +229,24 @@
                 <!-- Add New Tenant Section -->
                 <section id="add-tenant" class="section">
                     <h2><i class="fas fa-user-plus"></i> Add New Tenant</h2>
-                    <form id="tenant-form">
+                    <div class="form-progress">
+                        <div class="progress-steps">
+                            <div class="step active" data-step="1">
+                                <span class="step-number">1</span>
+                                <span class="step-label">Basic Info</span>
+                            </div>
+                            <div class="step" data-step="2">
+                                <span class="step-number">2</span>
+                                <span class="step-label">Financial</span>
+                            </div>
+                            <div class="step" data-step="3">
+                                <span class="step-number">3</span>
+                                <span class="step-label">Electricity</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="tenant-form" class="multi-step-form">
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="room-number">Room Number:</label>
