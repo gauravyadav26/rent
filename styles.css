@@ -947,10 +947,6 @@ select:focus {
         width: 95%;
     }
 
-    .form-actions {
-        flex-direction: column;
-    }
-
     .tenant-info {
         grid-template-columns: 1fr;
     }
