@@ -401,6 +401,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    // Ensure functions are available globally for onclick handlers
+    window.editTenant = editTenant;
+    window.recordPayment = recordPayment;
+    window.addElectricityReading = addElectricityReading;
+    window.openVacateForm = openVacateForm;
+    window.deleteTenant = deleteTenant;
+    window.editElectricityReading = editElectricityReading;
 });
 
 // Set up periodic data refresh with intelligent caching
@@ -1015,6 +1023,7 @@ async function handleDataImport(event) {
 
 // Display Functions
 function createTenantCard(tenant) {
+    console.log('Creating tenant card for:', tenant.id, tenant.tenantName);
     const monthsSinceStart = calculateMonthsDifference(tenant.startDate);
     const currentMonthBill = calculateCurrentMonthBill(tenant);
     const totalElectricityBill = calculateTotalElectricityBill(tenant);
@@ -1206,6 +1215,7 @@ async function handleTenantFormSubmit(e) {
 
 // Update the display function with improved tenant information
 function displayTenants(tenants) {
+    console.log('Displaying tenants:', tenants.length, tenants);
     const tenantsList = document.getElementById('tenants-list');
     tenantsList.innerHTML = '';
 
@@ -1235,6 +1245,7 @@ function displayTenants(tenants) {
     }
 
     list.forEach(tenant => {
+        console.log('Processing tenant for display:', tenant.id, typeof tenant.id, tenant.tenantName);
         const wrapper = document.createElement('div');
         wrapper.innerHTML = createTenantCard(tenant);
         const card = wrapper.firstElementChild;
@@ -1322,6 +1333,7 @@ function updatePreviousDueWithNewReading(tenant) {
 
 // Record payment
 function recordPayment(tenantId) {
+    console.log('recordPayment called with tenantId:', tenantId);
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
@@ -1395,6 +1407,7 @@ function closePaymentForm() {
 
 // Delete tenant
 async function deleteTenant(tenantId) {
+    console.log('deleteTenant called with tenantId:', tenantId);
     if (!confirm('Are you sure you want to delete this tenant?')) return;
 
     const currentPlot = getCurrentPlot();
@@ -1675,6 +1688,7 @@ async function checkFirebaseRules() {
 
 // Edit tenant
 function editTenant(tenantId) {
+    console.log('editTenant called with tenantId:', tenantId);
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
@@ -1896,6 +1910,7 @@ function calculateTotalAmountDue(tenant) {
 
 // Add electricity reading with validation
 async function addElectricityReading(tenantId) {
+    console.log('addElectricityReading called with tenantId:', tenantId);
     const currentPlot = getCurrentPlot();
     const plotKey = getPlotStorageKey(currentPlot);
     const tenants = JSON.parse(localStorage.getItem(plotKey) || '[]');
@@ -2097,6 +2112,7 @@ function handleDataExport() {
 // ---------- Vacate Tenant Helpers ----------
 // Open a small form with a proper date selector for vacating a tenant
 function openVacateForm(tenantId) {
+    console.log('openVacateForm called with tenantId:', tenantId);
     // Remove any existing vacate form
     const existing = document.querySelector('.vacate-form');
     if (existing) existing.remove();
