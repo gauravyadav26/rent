@@ -147,9 +147,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
     // Stash the event so it can be triggered later.
     deferredPrompt = e;
 
-    // Show custom banner
+    // Show custom banner only if not already installed
     const banner = document.getElementById('install-banner');
-    if (banner) banner.style.display = 'flex';
+    if (banner && !isAppInstalled()) banner.style.display = 'flex';
 });
 
 // Listen for successful installation
@@ -169,7 +169,16 @@ document.getElementById('dismiss-install')?.addEventListener('click', () => {
 
 window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
+    // Hide install banner when app is installed
+    const banner = document.getElementById('install-banner');
+    if (banner) banner.style.display = 'none';
 });
+
+// Check if app is already installed
+function isAppInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches || 
+           window.navigator.standalone === true;
+}
 
 // Migrate tenant IDs to numbers
 async function migrateTenantIds() {
@@ -319,6 +328,8 @@ function setupTenantDetailsModal() {
             
             // Add active class to clicked button
             button.classList.add('active');
+            // Update ARIA
+            tabButtons.forEach(btn => btn.setAttribute('aria-selected', btn === button ? 'true' : 'false'));
             
             // Show corresponding content
             const tabId = button.getAttribute('data-tab');
@@ -336,6 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     addThemeToggle();
     addTenantStatusFilter();
     initializeSidebar();
+    setupServiceWorkerUpdatePrompt();
 
     // Set tenants tab as active by default
     const tenantsTab = document.querySelector('.nav-btn[data-section="tenants"]');
@@ -587,6 +599,29 @@ function initializePlotTabs() {
             }
         });
     });
+
+    // Keyboard navigation for ARIA tabs
+    const tabList = document.querySelector('.plot-tabs[role="tablist"]');
+    if (tabList) {
+        tabList.addEventListener('keydown', (e) => {
+            const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
+            const current = document.activeElement;
+            const idx = tabs.indexOf(current);
+            if (idx === -1) return;
+            let nextIdx = idx;
+            if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabs.length;
+            if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabs.length) % tabs.length;
+            if (nextIdx !== idx) {
+                e.preventDefault();
+                tabs[idx].setAttribute('tabindex', '-1');
+                tabs[idx].setAttribute('aria-selected', 'false');
+                tabs[nextIdx].setAttribute('tabindex', '0');
+                tabs[nextIdx].setAttribute('aria-selected', 'true');
+                tabs[nextIdx].focus();
+                tabs[nextIdx].click();
+            }
+        });
+    }
 }
 
 // Setup event listeners for forms and buttons
@@ -1103,9 +1138,9 @@ function updateDashboardStats() {
     const totalMonthlyBill = allTenants.reduce((sum, tenant) => sum + calculateCurrentMonthBill(tenant), 0);
 
     document.getElementById('total-tenants').textContent = formatIndianNumber(totalTenants);
-    document.getElementById('total-rent').textContent = `₹${formatIndianNumber(Math.round(totalDue))}`;
-    document.getElementById('total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyRent))}`;
-    document.getElementById('total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(totalMonthlyBill))}`;
+    document.getElementById('total-rent').textContent = formatINR(totalDue);
+    document.getElementById('total-monthly-rent').textContent = formatINR(totalMonthlyRent);
+    document.getElementById('total-monthly-bill').textContent = formatINR(totalMonthlyBill);
     
     // Add current month payments calculation
     calculateCurrentMonthPayments();
@@ -2151,6 +2186,75 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============== Service Worker Update UX ==============
+let userAcceptedSwUpdate = false;
+
+function showUpdateBanner(onUpdate) {
+    let banner = document.querySelector('.update-notification');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.className = 'update-notification';
+        banner.innerHTML = `
+            <div class="update-content">
+                <i class="fas fa-sync"></i>
+                <span>New version available.</span>
+                <button type="button" class="apply-update">Update</button>
+                <button type="button" class="dismiss-update" style="margin-left: 8px; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.4)">Later</button>
+            </div>
+        `;
+        document.body.appendChild(banner);
+    }
+    const applyBtn = banner.querySelector('.apply-update');
+    const dismissBtn = banner.querySelector('.dismiss-update');
+    applyBtn.onclick = () => {
+        userAcceptedSwUpdate = true;
+        onUpdate?.();
+        banner.remove();
+    };
+    dismissBtn.onclick = () => banner.remove();
+}
+
+function setupServiceWorkerUpdatePrompt() {
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/', updateViaCache: 'none' });
+
+            // If there's a waiting worker already, prompt immediately
+            if (registration.waiting) {
+                showUpdateBanner(() => registration.waiting.postMessage('skipWaiting'));
+            }
+
+            // When a new worker is found
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed') {
+                        if (navigator.serviceWorker.controller) {
+                            // Updated content available
+                            showUpdateBanner(() => {
+                                if (registration.waiting) {
+                                    registration.waiting.postMessage('skipWaiting');
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Reload only after the user accepted update
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (userAcceptedSwUpdate) {
+                    window.location.reload();
+                }
+            });
+        } catch (error) {
+            console.error('SW registration failed:', error);
+        }
+    });
+}
+
 // Function to format number with commas
 function formatNumberWithCommas(number) {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -2163,6 +2267,14 @@ function formatIndianNumber(number) {
     const otherNumbers = numStr.substring(0, numStr.length - 3);
     const formatted = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + (otherNumbers ? "," : "") + lastThree;
     return formatted;
+}
+
+// Standardized INR currency formatter
+const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+function formatINR(amount) {
+    const value = Number.isFinite(amount) ? amount : 0;
+    return inrFormatter.format(Math.round(value));
 }
 
 // Function to calculate current month's total payments
@@ -2191,7 +2303,7 @@ function calculateCurrentMonthPayments() {
     });
     
     // Update the display with rounded number in Indian format
-    document.getElementById('current-month-payments').textContent = `₹${formatIndianNumber(Math.round(totalPayments))}`;
+    document.getElementById('current-month-payments').textContent = formatINR(totalPayments);
 }
 
 // Initialize sidebar toggle
@@ -2302,10 +2414,10 @@ function updateCombinedStats() {
 
     // Update combined stats display
     document.getElementById('combined-total-tenants').textContent = formatIndianNumber(combinedTenants);
-    document.getElementById('combined-total-rent').textContent = `₹${formatIndianNumber(Math.round(combinedDue))}`;
-    document.getElementById('combined-total-monthly-rent').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyRent))}`;
-    document.getElementById('combined-total-monthly-bill').textContent = `₹${formatIndianNumber(Math.round(combinedMonthlyBill))}`;
-    document.getElementById('combined-current-month-payments').textContent = `₹${formatIndianNumber(Math.round(combinedPayments))}`;
+    document.getElementById('combined-total-rent').textContent = formatINR(combinedDue);
+    document.getElementById('combined-total-monthly-rent').textContent = formatINR(combinedMonthlyRent);
+    document.getElementById('combined-total-monthly-bill').textContent = formatINR(combinedMonthlyBill);
+    document.getElementById('combined-current-month-payments').textContent = formatINR(combinedPayments);
 }
 
 // Sync data with Firebase

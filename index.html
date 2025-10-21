@@ -8,7 +8,9 @@
     <meta name="googlebot" content="noindex, nofollow">
     <meta name="description" content="A web application for managing rental properties and tenants">
     <meta name="author" content="Rent Management System">
-    <meta name="theme-color" content="#3b82f6">
+    <meta name="theme-color" content="#3b82f6" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0b132b" media="(prefers-color-scheme: dark)">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com 'sha256-0YmAh7tKVRqDBmOyGB1pu1l8WgYebO26EBrhcfyo6MA=' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'">
     
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
@@ -17,8 +19,10 @@
     <title>Rental Management System</title>
     <!-- Styles -->
     <link rel="stylesheet" href="/styles.css?ver=1.0.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <!-- Theme Initialization -->
     <script>
@@ -41,20 +45,20 @@
         <button id="dismiss-install" class="dismiss-btn" aria-label="Dismiss">×</button>
     </div>
     <div class="container">
-        <div class="plot-tabs">
-            <button class="plot-tab active" data-plot="home">
+        <div class="plot-tabs" role="tablist" aria-label="Plots">
+            <button class="plot-tab active" role="tab" aria-selected="true" aria-controls="panel-home" id="tab-home" tabindex="0" data-plot="home">
                 <i class="fas fa-home"></i>
                 Home
             </button>
-            <button class="plot-tab" data-plot="baba">
+            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-baba" id="tab-baba" tabindex="-1" data-plot="baba">
                 <i class="fas fa-building"></i>
                 Baba
             </button>
-            <button class="plot-tab" data-plot="shop">
+            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-shop" id="tab-shop" tabindex="-1" data-plot="shop">
                 <i class="fas fa-store"></i>
                 Shop
             </button>
-            <button class="plot-tab" data-plot="others">
+            <button class="plot-tab" role="tab" aria-selected="false" aria-controls="panel-others" id="tab-others" tabindex="-1" data-plot="others">
                 <i class="fas fa-ellipsis-h"></i>
                 Others
             </button>
@@ -154,7 +158,7 @@
                 </section>
 
                 <!-- View Tenants Section -->
-                <section id="tenants" class="section">
+                <section id="tenants" class="section" role="region" aria-labelledby="tab-tenants">
                     <div class="section-header">
                         <h2>Tenant</h2>
                         <div class="search-bar">
@@ -174,41 +178,41 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="room-number">Room Number:</label>
-                                <input type="text" id="room-number" required>
+                                <input type="text" id="room-number" required inputmode="numeric" autocomplete="on">
                             </div>
                             <div class="form-group">
                                 <label for="tenant-name">Tenant Name:</label>
-                                <input type="text" id="tenant-name" required>
+                                <input type="text" id="tenant-name" required autocomplete="name" autocapitalize="words" spellcheck="false">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="start-date">Start Date:</label>
-                                <input type="date" id="start-date" required>
+                                <input type="date" id="start-date" required autocomplete="on">
                             </div>
                             <div class="form-group">
                                 <label for="monthly-rent">Monthly Rent:</label>
-                                <input type="number" id="monthly-rent" required min="0" step="0.01">
+                                <input type="number" id="monthly-rent" required min="0" step="0.01" inputmode="decimal" autocomplete="transaction-amount">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="advance-paid">Advance Paid:</label>
-                                <input type="number" id="advance-paid" required min="0" step="0.01">
+                                <input type="number" id="advance-paid" required min="0" step="0.01" inputmode="decimal" autocomplete="transaction-amount">
                             </div>
                             <div class="form-group">
                                 <label for="starting-due">Starting Due Amount:</label>
-                                <input type="number" id="starting-due" value="0" min="0" step="0.01">
+                                <input type="number" id="starting-due" value="0" min="0" step="0.01" inputmode="decimal" autocomplete="transaction-amount">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="electricity-rate">Electricity Rate (per unit):</label>
-                                <input type="number" id="electricity-rate" value="10" required min="0" step="0.01">
+                                <input type="number" id="electricity-rate" value="10" required min="0" step="0.01" inputmode="decimal">
                             </div>
                             <div class="form-group">
                                 <label for="starting-electricity">Starting Electricity Reading:</label>
-                                <input type="number" id="starting-electricity" required min="0" step="0.01">
+                                <input type="number" id="starting-electricity" required min="0" step="0.01" inputmode="decimal">
                             </div>
                         </div>
                         <button type="submit" class="submit-btn">
@@ -318,12 +322,12 @@
                         <p>Electricity Rate: <span id="tenant-detail-rate"></span>/unit</p>
                     </div>
                     
-                    <div class="tabs">
-                        <button class="tab-btn active" data-tab="payments">Payment History</button>
-                        <button class="tab-btn" data-tab="electricity">Electricity Readings</button>
+                    <div class="tabs" role="tablist" aria-label="Tenant details tabs">
+                        <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="payments-tab" id="tab-payments" data-tab="payments">Payment History</button>
+                        <button class="tab-btn" role="tab" aria-selected="false" aria-controls="electricity-tab" id="tab-electricity" data-tab="electricity">Electricity Readings</button>
                     </div>
                     
-                    <div id="payments-tab" class="tab-content active">
+                    <div id="payments-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-payments">
                         <div class="table-container">
                             <table id="payment-history-table">
                                 <thead>
@@ -342,7 +346,7 @@
                         </div>
                     </div>
                     
-                    <div id="electricity-tab" class="tab-content">
+                    <div id="electricity-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-electricity">
                         <div class="table-container">
                             <table id="electricity-readings-table">
                                 <thead>
@@ -368,30 +372,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js" defer></script>
     <script src="/script.js" defer></script>
 
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
-                try {
-                    const registration = await navigator.serviceWorker.register('/service-worker.js', {
-                        scope: '/',
-                        updateViaCache: 'none'
-                    });
-                    console.log('ServiceWorker registration successful');
-
-                    // Handle controller change
-                    let refreshing = false;
-                    navigator.serviceWorker.addEventListener('controllerchange', () => {
-                        if (!refreshing) {
-                            refreshing = true;
-                            window.location.reload();
-                        }
-                    });
-                } catch (error) {
-                    console.error('ServiceWorker registration failed:', error);
-                }
-            });
-        }
-    </script>
+    <!-- Service worker registration moved to script.js (setupServiceWorkerUpdatePrompt) -->
 </body>
 </html> 
